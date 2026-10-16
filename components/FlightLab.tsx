@@ -36,6 +36,7 @@ import {
 import {
   initialState,
   missions,
+  stabilizerActive,
   type FlightState,
   type Input,
 } from "../lib/flight";
@@ -948,6 +949,11 @@ export default function FlightLab() {
           <div className="pressure-track">
             <i style={{ width: `${telemetry.pressure}%` }} />
           </div>
+          <span className="instrument-foot">
+            {telemetry.pressure <= 0 ? "ASSIST: NO PRESSURE"
+              : running && !paused && !modal && stabilizerActive(telemetry)
+                ? "AUTO LANDING ASSIST" : "LANDING ASSIST STANDBY"}
+          </span>
         </div>
         <div className="paint-panel">
           <span className="instrument-label">BODY COLOR</span>
@@ -1078,7 +1084,9 @@ export default function FlightLab() {
             <p className="help-tip">
               <Zap size={17} /> Pressure is limited and recharges on the ground.
               Fly through the rings in order, then land gently on the H pad
-              below 18 km/h.
+              below 18 km/h. Landing assist fires automatic air bursts near the
+              ground to slow a fast descent and level the car. It uses the same
+              pressure reserve and cannot always recover a last-second fall.
             </p>
             <button className="primary" onClick={() => setModal(null)}>
               Got it <Check size={16} />

@@ -39,6 +39,7 @@ Stable versions checked against the npm registry on October 16, 2026: Next.js 16
 - On mobile, hold the corresponding on-screen controls.
 - Approach the runway ramp at speed for automatic liftoff. Fly through the rings in order, then land gently on the H pad below 18 km/h. A hard landing ends the flight.
 - Lift and boost consume pressure. Pressure recharges on the ground. All telemetry represents gameplay values.
+- Automatic landing assistance watches clearance above the ground or training ramp and descent speed. When needed, it spends pressure on lift and corrective jets to slow the fall and level the body. The HUD shows when it is firing, with the same white vapor and optional pneumatic sound as manual thrust. An empty tank or an unrecoverable last-second fall can still crash.
 - Four courses, free flight, four body colors, three cameras, and three graphics settings are available. Personal best and graphics quality are stored locally in the browser.
 - Select **Enable air bursts** to hear short pneumatic valve releases during lift, boost, and attitude control. Driving alone is silent. The same sound is available during the home-screen thruster demo; there is no engine hum.
 

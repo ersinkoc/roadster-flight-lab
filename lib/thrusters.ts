@@ -70,6 +70,7 @@ export function thrusterPower(
   const nozzle = THRUSTERS[index];
   if (!nozzle) return 0;
   const supply = 0.45 + 0.55 * Math.sqrt(state.pressure / 100);
+  const assisting = stabilizerActive(state);
   if (state.rampProgress >= 0) return 0;
   if (nozzle.kind === "rear")
     return input.boost && input.throttle > 0 ? supply : 0;
@@ -77,6 +78,7 @@ export function thrusterPower(
     return state.position.y > 1 &&
       (state.stunt > 0 ||
         (state.flipTimer >= 0 && !state.flipComplete) ||
+        (assisting && Math.abs(state.roll) > 0.04 && state.roll * nozzle.side < 0) ||
         input.steer * nozzle.side < 0)
       ? supply * 0.55
       : 0;
@@ -84,8 +86,11 @@ export function thrusterPower(
     state.stunt > 0
       ? Math.max(0, Math.sin(state.stunt) * nozzle.side) * 0.65
       : 0;
+  const correction = assisting ?
+    -Math.sin(state.roll) * nozzle.side * 0.15 +
+    Math.sin(state.pitch) * Math.sign(nozzle.position[2]) * 0.1 : 0;
   return (
-    Math.min(1, (input.lift || stabilizerActive(state) ? 0.85 : 0) + rolling) *
+    Math.max(0, Math.min(1, (input.lift || assisting ? 0.85 : 0) + correction + rolling)) *
     supply
   );
 }

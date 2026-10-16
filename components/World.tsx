@@ -307,7 +307,7 @@ function FlightScene(p: WorldProps) {
       car.current.rotation.set(
         s.rampProgress >= 0 || s.stuntLaunched
           ? s.pitch
-          : rampPitch || Math.min(0.13, s.vertical * 0.008),
+          : rampPitch || s.pitch,
         s.flipTimer >= 0 && !s.flipComplete
           ? -s.heading *
               flipRecovery(s.flipTimer)

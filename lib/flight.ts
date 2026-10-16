@@ -123,13 +123,14 @@ export function initialState(): FlightState {
   };
 }
 export function stabilizerActive(s: FlightState) {
-  return (
-    s.stuntLaunched &&
-    s.position.y > 0 &&
-    s.position.y < 22 &&
-    s.vertical < -5 &&
-    s.pressure > 0
-  );
+  if (s.pressure <= 0 || s.rampProgress >= 0 ||
+    s.status === "crashed" || s.status === "complete") return false;
+  const clearance = s.position.y - rampHeight(s.position.x, s.position.z);
+  if (clearance <= 0.05) return false;
+  if (s.stuntLaunched) return clearance < 22 && s.vertical < -5;
+  const acceleration = 15 * (0.45 + 0.55 * Math.sqrt(Math.min(100, s.pressure) / 100));
+  const brakingDistance = Math.max(0, (s.vertical ** 2 - 2.5 ** 2) / (2 * acceleration));
+  return s.vertical < -2.5 && clearance < Math.min(22, brakingDistance + 2);
 }
 export function rampHeight(x: number, z: number) {
   return trainingRampHeight(x, z);
@@ -158,7 +159,8 @@ export function stepFlight(
   let status: FlightState["status"] = s.status;
   const priorFloor = rampHeight(p.x, p.z);
   const airborne = p.y > priorFloor + 0.05;
-  const thrust = (input.lift || stabilizerActive(s)) && pressure > 0;
+  const assisting = stabilizerActive(s);
+  const thrust = (input.lift || assisting) && pressure > 0;
   const boosted = input.boost && pressure > 0 && input.throttle > 0;
   speed = Math.max(
     0,
@@ -222,7 +224,9 @@ export function stepFlight(
   heading +=
     input.steer * Math.min(1, speed / 8) * (airborne ? 0.7 : 1.05) * dt;
   if (thrust) {
-    vertical += 15 * dt;
+    const supply = assisting && !input.lift && !s.stuntLaunched
+      ? 0.45 + 0.55 * Math.sqrt(pressure / 100) : 1;
+    vertical += 15 * supply * dt;
     status = "flying";
   } else if (airborne) vertical -= (input.descend ? 17 : 8) * dt;
   else vertical = 0;
@@ -322,6 +326,7 @@ export function stepFlight(
     airborne &&
     p.y > 8 &&
     pressure >= 10 &&
+    !assisting &&
     stunt === 0
   ) {
     stunt = 0.001;
@@ -337,7 +342,19 @@ export function stepFlight(
       }
     }
   }
-  const roll = input.steer * (airborne ? -0.22 : -0.05) + stunt;
+  let roll = input.steer * (airborne ? -0.22 : -0.05) + stunt;
+  if (assisting && !(s.flipTimer >= 0 && !s.flipComplete)) {
+    // Return by the shortest angle; a roll near 360 degrees must not unwind
+    // all the way around while the vehicle is approaching the road.
+    const decay = Math.exp(-10 * dt);
+    roll = Math.atan2(Math.sin(s.roll), Math.cos(s.roll)) * decay;
+    pitch = Math.atan2(Math.sin(s.pitch), Math.cos(s.pitch)) * decay;
+    stunt = 0;
+    if (status !== "crashed" && p.y > floor)
+      message = "LANDING ASSIST — automatic air bursts are slowing the descent and leveling the car.";
+  } else if (message.startsWith("LANDING ASSIST") && p.y > floor) {
+    message = "Approach stabilized. Landing assist is standing by.";
+  }
   const building = buildingImpact(previous, p, s, { heading, pitch, roll });
   const approachingStunt = !s.stuntLaunched && previous.z >= STUNT_RAMP.z &&
     previous.y < 0.65 && Math.cos(heading) > 0.94 &&
