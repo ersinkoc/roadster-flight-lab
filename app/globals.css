@@ -1,4 +1,23 @@
 @import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+.briefing .challenge-brief { font: 9px/1.6 var(--mono); color: #3b675c; margin: -10px 0 12px; }
+.course-best { font: 8px var(--mono); color: #687c64; margin-bottom: 10px; }
+.challenge-hud { position: absolute; top: 68px; left: 50%; transform: translateX(-50%); width: 220px; padding: 12px 16px; color: #ecfff8; background: #162b2be8; border: 1px solid #79b6a566; border-radius: 3px; box-shadow: 0 4px 24px #0002; pointer-events: none; }
+.challenge-hud > div { display: flex; justify-content: space-between; font: 9px var(--mono); }
+.gate-progress { display: flex; gap: 4px; margin: 10px 0; }
+.gate-progress i { height: 3px; background: #516b68; flex: 1; }
+.gate-progress i[data-cleared="true"] { background: #a6ffda; box-shadow: 0 0 7px #a6ffda77; }
+.skill-reward { position: absolute; top: 34%; left: 50%; transform: translateX(-50%); display: grid; text-align: center; color: #f1fff5; text-shadow: 0 2px 12px #102c27; pointer-events: none; animation: skill-pop 2s both; }
+.skill-reward span { font: 12px var(--mono); letter-spacing: 3px; }
+.skill-reward b { font: 64px/1.1 var(--display); }
+.skill-reward small { font: 9px var(--mono); }
+.flight-medal { color: #a47529; font: 13px var(--mono); margin: 16px 0; }
+.flight-medal span { font-size: 25px; vertical-align: middle; }
+.flight-medal[data-medal="SILVER"] { color: #63767e; }
+.flight-medal[data-medal="BRONZE"] { color: #a56540; }
+.flight-medal small { display: block; color: #687163; font-size: 9px; margin-top: 8px; }
+@keyframes skill-pop { 0% { opacity: 0; margin-top: 10px; } 12%,70% { opacity: 1; margin-top: 0; } 100% { opacity: 0; margin-top: -8px; } }
+@media (max-width: 800px) { .challenge-hud { top: 128px; left: 16px; transform: none; width: 165px; padding: 8px 10px; } .challenge-hud > div { font-size: 8px; } .skill-reward { top: 35%; left: 25%; } .skill-reward b { font-size: 44px; } .skill-reward span { font-size: 9px; letter-spacing: 1px; } }
+@media (prefers-reduced-motion: reduce) { .skill-reward { animation: none; } }
 :root {
   --paper: #f5f3ec;
   --ink: #272b27;

@@ -190,6 +190,13 @@ export default function Roadster({
   const [wheelPhoto, lampPhoto] = useTexture([
     "/images/tesla-roadster-side.jpg", "/images/tesla-roadster-front.jpg",
   ]);
+  useEffect(() => {
+    for (const texture of [wheelPhoto, lampPhoto]) {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.anisotropy = 8;
+      texture.needsUpdate = true;
+    }
+  }, [wheelPhoto, lampPhoto]);
   useFrame((_, delta) => {
     for (const wheel of wheels.current)
       if (wheel) wheel.rotation.y -= (speed / 0.431) * Math.min(delta, 0.05);
@@ -208,6 +215,8 @@ export default function Roadster({
       wheelFace: photographedWheel(),
       cheeks: panels([-1,1].map(s => [[s*0.72,0.64,-2.536],
         [s*0.965,0.56,-2.536],[s*0.965,0.25,-2.536],[s*0.83,0.24,-2.536]])),
+      tail: panels([[[-0.99,0.94,2.415],[0.99,0.94,2.415],
+        [0.94,0.57,2.415],[-0.94,0.57,2.415]]]),
       sides: [sidePanel(-1), sidePanel(1)],
       fenders: [fender(-1), fender(1)],
       pillars: [-1, 1].map((s) => lines([
@@ -245,18 +254,18 @@ export default function Roadster({
       <mesh geometry={geometries.body} castShadow receiveShadow>
         <meshPhysicalMaterial
           color={color}
-          metalness={0.32}
-          roughness={0.19}
+          metalness={0.18}
+          roughness={0.23}
           clearcoat={1}
           clearcoatRoughness={0.07}
         />
       </mesh>
-      {[...geometries.sides, ...geometries.fenders, geometries.rearPillars, geometries.belt, geometries.cheeks].map((g, i) => (
+      {[...geometries.sides, ...geometries.fenders, geometries.rearPillars, geometries.belt, geometries.cheeks, geometries.tail].map((g, i) => (
         <mesh key={i} geometry={g} castShadow receiveShadow>
           <meshPhysicalMaterial
             color={color}
-            metalness={0.32}
-            roughness={0.19}
+            metalness={0.18}
+            roughness={0.23}
             clearcoat={1}
             clearcoatRoughness={0.07}
             side={THREE.DoubleSide}
@@ -334,6 +343,10 @@ export default function Roadster({
       <mesh geometry={geometries.intake}>
         <meshStandardMaterial color="#080d11" metalness={0.2} roughness={0.55} side={THREE.DoubleSide} />
       </mesh>
+      {[0.33,0.43,0.53].map(y => <mesh key={y} position={[0,y,-2.54]}>
+        <boxGeometry args={[1.47,0.012,0.03]} />
+        <meshStandardMaterial color="#263039" metalness={0.65} roughness={0.35} />
+      </mesh>)}
       <mesh position={[0, 0.28, -2.48]}>
         <boxGeometry args={[1.84, 0.045, 0.24]} />
         <meshStandardMaterial color="#131b22" roughness={0.5} />
@@ -444,20 +457,34 @@ export default function Roadster({
                 <meshStandardMaterial map={wheelPhoto} roughness={0.32} metalness={0.15}
                   emissiveMap={wheelPhoto} emissive="#ffffff" emissiveIntensity={0.18} />
               </mesh>
+              <mesh position={[0,-side*0.219,0]} rotation={[Math.PI/2,0,0]}>
+                <torusGeometry args={[0.341,0.007,8,64]} />
+                <meshStandardMaterial color="#899399" metalness={0.95} roughness={0.22} />
+              </mesh>
+              <mesh position={[0,-side*0.225,0]}>
+                <cylinderGeometry args={[0.057,0.057,0.026,24]} />
+                <meshStandardMaterial color="#242d31" metalness={0.8} roughness={0.25} />
+              </mesh>
+              {Array.from({length:5},(_,i) => <group key={i} rotation={[0,i*Math.PI*2/5,0]}>
+                <mesh position={[0,-side*0.219,0.198]} rotation={[0,-0.12,0]}>
+                  <boxGeometry args={[0.016,0.022,0.258]} />
+                  <meshStandardMaterial color="#30383c" metalness={0.85} roughness={0.25} />
+                </mesh>
+              </group>)}
               </group>
             </group>
           ))}
         </group>
       ))}
-      <mesh position={[0, 0.74, 2.32]}>
-        <boxGeometry args={[1.79, 0.026, 0.028]} />
+      <mesh position={[0, 0.90, 2.433]}>
+        <boxGeometry args={[1.88, 0.023, 0.018]} />
         <meshStandardMaterial
           color="#b7261d"
           emissive="#ff2616"
           emissiveIntensity={2}
         />
       </mesh>
-      <mesh position={[0, 0.59, 2.335]}>
+      <mesh position={[0, 0.73, 2.435]}>
         <boxGeometry args={[0.35, 0.13, 0.025]} />
         <meshStandardMaterial
           color="#282e34"

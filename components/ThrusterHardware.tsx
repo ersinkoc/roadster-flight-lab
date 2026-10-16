@@ -186,7 +186,7 @@ export default function ThrusterHardware({
           </group>
         ))}
       </group>
-      <group position={[0, 0.25, 2.435]} rotation={[0.35, 0, 0]} scale={0.94}>
+      <group position={[0, 0.35, 2.435]} rotation={[0.35, 0, 0]} scale={0.94}>
       <group position={[0, -0.25, -2.435]}>
       <mesh position={[0, 0.33, 2.33]}>
         <boxGeometry args={[1.89, 0.44, 0.17]} />

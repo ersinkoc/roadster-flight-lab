@@ -8,7 +8,7 @@ import {
   type ComponentRef,
 } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Environment, Lightformer, Sky, OrbitControls } from "@react-three/drei";
+import { Environment, Lightformer, Sky, OrbitControls, Line } from "@react-three/drei";
 import * as THREE from "three";
 import Roadster from "./Roadster";
 import ThrusterHardware from "./ThrusterHardware";
@@ -331,8 +331,13 @@ function FlightScene(p: WorldProps) {
       );
       lookTarget.set(0, demo ? pos.y + 0.5 : 0.7, 24);
       if (!inspecting.current) {
-        cameraTarget.set(pos.x + (p.modelView === "side" ? 7.5 : 0), pos.y + 0.75,
-          pos.z + (p.modelView === "front" ? -5.5 : p.modelView === "rear" ? 5.5 : 0));
+        const portrait = size.width < size.height * 0.8;
+        const fov = (portrait ? 55 : 37) * Math.PI / 180;
+        const side = p.modelView === "side";
+        const distance = Math.max(side ? 7.5 : 5.5,
+          (side ? 5.8 : 3.1) / (2*Math.tan(fov/2)*(size.width/size.height)*(portrait ? 0.9 : 0.46)));
+        cameraTarget.set(pos.x + (side ? distance : 0), pos.y + 0.75,
+          pos.z + (p.modelView === "front" ? -distance : p.modelView === "rear" ? distance : 0));
         lookTarget.set(pos.x, pos.y + 0.75, pos.z);
       }
     } else {
@@ -427,7 +432,7 @@ function FlightScene(p: WorldProps) {
         intensity={p.night ? 1.2 : 2}
         color={p.night ? "#c5def5" : "#fff8eb"}
         castShadow={p.quality !== "low"}
-        shadow-mapSize={[1024, 1024]}
+        shadow-mapSize={p.quality === "high" ? [2048,2048] : [1024,1024]}
         shadow-camera-left={-30}
         shadow-camera-right={30}
         shadow-camera-top={30}
@@ -438,12 +443,12 @@ function FlightScene(p: WorldProps) {
         <Environment
           resolution={128}
           frames={1}
-          environmentIntensity={p.night ? 0.32 : 1}
+          environmentIntensity={p.night ? 0.65 : 1.1}
         >
           <Lightformer
             position={[0, 8, 0]}
             rotation={[Math.PI / 2, 0, 0]}
-            scale={[20, 20, 1]}
+            scale={[12, 7, 1]}
             intensity={2}
           />
           <Lightformer
@@ -479,9 +484,18 @@ function FlightScene(p: WorldProps) {
         reset={p.reset + (p.demo ? 100000 : 0)}
         night={p.night}
       />
+      {!p.free && p.mission.challenge && <Line points={[
+        [0,5,-65], ...p.mission.gates.map(g => [g.x,g.y,g.z] as [number,number,number]),
+        [p.mission.landing.x,0.4,p.mission.landing.z],
+      ]} color="#5ac8c0" lineWidth={1} dashed dashSize={2} gapSize={4} transparent opacity={0.25} />}
       {!p.free &&
         p.mission.gates.map((g, i) => (
           <group key={i} position={[g.x, g.y, g.z]}>
+            {p.mission.challenge && i >= state.current.nextGate && <mesh>
+              <torusGeometry args={[g.radius*0.28,0.035,6,48]} />
+              <meshBasicMaterial color={i === state.current.nextGate ? "#99ffee" : "#789e99"}
+                transparent opacity={i === state.current.nextGate ? 0.8 : 0.25} />
+            </mesh>}
             <mesh>
               <torusGeometry args={[g.radius, 0.13, 8, 64]} />
               <meshStandardMaterial
@@ -537,15 +551,17 @@ export default function World(props: WorldProps) {
       shadows={props.quality === "low" ? false : "percentage"}
       dpr={
         props.quality === "high"
-          ? [1, 1.75]
+          ? [1, 2]
           : props.quality === "low"
             ? 1
-            : [1, 1.25]
+            : [1, 1.5]
       }
       camera={{ position: [9, 4.2, 14], fov: 48, near: 0.1, far: 5000 }}
       gl={{
         antialias: props.quality !== "low",
         powerPreference: "high-performance",
+        toneMapping: THREE.ACESFilmicToneMapping,
+        outputColorSpace: THREE.SRGBColorSpace,
       }}
     >
       <FlightScene {...props} />

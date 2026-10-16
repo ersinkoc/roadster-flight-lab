@@ -19,6 +19,7 @@ export type Mission = {
   gates: Gate[];
   landing: Vec3;
   seconds: number;
+  challenge?: boolean;
 };
 export const missions: Mission[] = [
   {
@@ -67,6 +68,24 @@ export const missions: Mission[] = [
     landing: { x: 0, y: 0, z: -620 },
   },
   {
+    id: "air-slalom",
+    name: "Air slalom",
+    subtitle: "Find the center. Chain perfect passes. Bring it home.",
+    difficulty: "SKILL RUN",
+    challenge: true,
+    seconds: 110,
+    gates: [
+      { x: 0, y: 9, z: -95, radius: 10 },
+      { x: -18, y: 17, z: -175, radius: 10 },
+      { x: 20, y: 24, z: -265, radius: 11 },
+      { x: -22, y: 29, z: -360, radius: 11 },
+      { x: 16, y: 23, z: -455, radius: 10 },
+      { x: -12, y: 15, z: -545, radius: 10 },
+      { x: 0, y: 8, z: -630, radius: 10 },
+    ],
+    landing: { x: 0, y: 0, z: -730 },
+  },
+  {
     id: "stunt",
     name: "Stunt ramp",
     subtitle: "Go inverted. Flip. Recover. Land.",
@@ -97,6 +116,11 @@ export type FlightState = {
   pitch: number;
   stuntLaunched: boolean;
   flipComplete: boolean;
+  combo: number;
+  perfectGates: number;
+  reward: string;
+  rewardAt: number;
+  rewardPoints: number;
 };
 export function initialState(): FlightState {
   return {
@@ -120,6 +144,11 @@ export function initialState(): FlightState {
     pitch: 0,
     stuntLaunched: false,
     flipComplete: false,
+    combo: 0,
+    perfectGates: 0,
+    reward: "",
+    rewardAt: -10,
+    rewardPoints: 0,
   };
 }
 export function stabilizerActive(s: FlightState) {
@@ -157,6 +186,7 @@ export function stepFlight(
     distance,
   } = s;
   let status: FlightState["status"] = s.status;
+  let { combo, perfectGates, reward, rewardAt, rewardPoints } = s;
   const priorFloor = rampHeight(p.x, p.z);
   const airborne = p.y > priorFloor + 0.05;
   const assisting = stabilizerActive(s);
@@ -292,9 +322,20 @@ export function stepFlight(
     if (t >= 0 && t <= 1) {
       const x = previous.x + (p.x - previous.x) * t,
         y = previous.y + (p.y - previous.y) * t;
-      if (Math.hypot(x - g.x, y - g.y) < g.radius - 1.1) {
+      const offset = Math.hypot(x - g.x, y - g.y);
+      if (offset < g.radius - 1.1 && status !== "crashed") {
         nextGate++;
         score += 500;
+        if (mission.challenge) {
+          const perfect = offset < g.radius * 0.28;
+          combo = perfect ? Math.min(5, combo + 1) : 0;
+          perfectGates += perfect ? 1 : 0;
+          rewardPoints = 500 + (perfect ? combo * 200 : 0) + (speed > 35 ? 100 : 0);
+          score += rewardPoints - 500;
+          pressure = Math.min(100, pressure + (perfect ? 6 : 0));
+          reward = perfect ? "PERFECT LINE" : offset < g.radius * 0.65 ? "CLEAN PASS" : "RING CLEARED";
+          rewardAt = s.elapsed + dt;
+        }
         message =
           nextGate === mission.gates.length
             ? "All rings cleared! Land gently on the marked pad."
@@ -426,5 +467,17 @@ export function stepFlight(
     pitch,
     stuntLaunched: s.stuntLaunched,
     flipComplete,
+    combo, perfectGates, reward, rewardAt, rewardPoints,
   };
+}
+
+export function flightMedal(s: FlightState, mission: Mission): "GOLD" | "SILVER" | "BRONZE" | null {
+  if (s.status !== "complete") return null;
+  if (mission.challenge) {
+    const accuracy = s.perfectGates / mission.gates.length;
+    return accuracy >= 0.7 && s.elapsed < mission.seconds * 0.75 ? "GOLD" :
+      accuracy >= 0.4 ? "SILVER" : "BRONZE";
+  }
+  return s.pressure >= 60 && s.elapsed < mission.seconds * 0.5 ? "GOLD" :
+    s.pressure >= 30 ? "SILVER" : "BRONZE";
 }

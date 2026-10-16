@@ -37,6 +37,7 @@ import {
   initialState,
   missions,
   stabilizerActive,
+  flightMedal,
   type FlightState,
   type Input,
 } from "../lib/flight";
@@ -171,10 +172,10 @@ export default function FlightLab() {
   const [running, setRunning] = useState(false),
     [paused, setPaused] = useState(false),
     [free, setFree] = useState(false),
-    [missionIndex, setMissionIndex] = useState(missions.length - 1),
+    [missionIndex, setMissionIndex] = useState(missions.length - 2),
     [color, setColor] = useState(0),
     [quality, setQuality] = useState("balanced"),
-    [night, setNight] = useState(true),
+    [night, setNight] = useState(false),
     [demo, setDemo] = useState(false),
     [homeView, setHomeView] = useState<"photo" | "3d">("photo"),
     [modelView, setModelView] = useState<"front" | "side" | "rear">("side"),
@@ -189,6 +190,7 @@ export default function FlightLab() {
     [telemetry, setTelemetry] = useState(initialState),
     [fps, setFps] = useState(0),
     [best, setBest] = useState(0),
+    [courseBests, setCourseBests] = useState<Record<string, number>>({}),
     [tab, setTab] = useState<"mission" | "vehicle">("mission");
   const input = useRef<Input>(emptyInput()),
     keys = useRef(new Set<string>()),
@@ -204,6 +206,9 @@ export default function FlightLab() {
     if (new URLSearchParams(window.location.search).get("view") === "3d") setHomeView("3d");
     try {
       setBest(Number(localStorage.getItem("flightlab-best")) || 0);
+      const saved = JSON.parse(localStorage.getItem("flightlab-courses") || "{}");
+      if (saved && typeof saved === "object" && !Array.isArray(saved))
+        setCourseBests(Object.fromEntries(Object.entries(saved).filter(([,v]) => typeof v === "number" && Number.isFinite(v)) as [string, number][]));
       const q = localStorage.getItem("flightlab-quality");
       if (q && ["low", "balanced", "high"].includes(q)) setQuality(q);
     } catch {}
@@ -316,6 +321,15 @@ export default function FlightLab() {
     demoAudioRef.current = demo && !running;
     if (!soundRef.current) audio.current?.mute();
   }, [sound, running, demo, paused, modal, ended]);
+  useEffect(() => {
+    if (telemetry.status === "complete" && running && !replay) {
+      setCourseBests(previous => {
+        const updated = { ...previous, [mission.id]: Math.max(previous[mission.id] || 0, telemetry.score) };
+        try { localStorage.setItem("flightlab-courses", JSON.stringify(updated)); } catch {}
+        return updated;
+      });
+    }
+  }, [telemetry.status, telemetry.score, running, replay, mission.id]);
   useEffect(() => {
     if (telemetry.status === "complete" && running && !replay)
       setBest((b) => {
@@ -587,6 +601,8 @@ export default function FlightLab() {
                     ? "No objectives. Just you and the sky."
                     : mission.subtitle}
                 </p>
+                {mission.challenge && !free && <p className="challenge-brief">Center passes build a ×5 combo and restore air. Gold: 5 perfect passes in under 82.5s.</p>}
+                {!!courseBests[mission.id] && !free && <div className="course-best">COURSE BEST · {courseBests[mission.id].toLocaleString("en-US")}</div>}
                 <label className="mission-select">
                   <span>COURSE</span>
                   <select
@@ -770,6 +786,16 @@ export default function FlightLab() {
               <i />
               <span />
             </div>
+            {!free && mission.challenge && <div className="challenge-hud" aria-label="Challenge progress">
+              <div><span>AIR SLALOM</span><b>{telemetry.nextGate} / {mission.gates.length}</b></div>
+              <div className="gate-progress">{mission.gates.map((_,i) => <i key={i} data-cleared={i < telemetry.nextGate} />)}</div>
+              <div><span>{telemetry.perfectGates} PERFECT</span><b>COMBO ×{Math.max(1,telemetry.combo)}</b></div>
+            </div>}
+            {!ended && !paused && telemetry.elapsed - telemetry.rewardAt < 2 && telemetry.reward &&
+              <div className="skill-reward" key={telemetry.rewardAt} role="status"><span>{telemetry.reward}</span>
+                <b>+{telemetry.rewardPoints.toLocaleString("en-US")}</b>
+                {telemetry.combo > 0 && <small>×{telemetry.combo} COMBO · AIR +6%</small>}
+              </div>}
             <div className="flight-message" role="status">
               {telemetry.message}
             </div>
@@ -901,6 +927,12 @@ export default function FlightLab() {
                   : "Continue your flight whenever you are ready."}
               </p>
               {ended && (
+                <div className="flight-medal" data-medal={flightMedal(telemetry, mission)}>
+                  {flightMedal(telemetry, mission) && <><span>✦</span> {flightMedal(telemetry, mission)} FLIGHT</>}
+                  {mission.challenge && <small>{telemetry.perfectGates} perfect passes · final combo ×{telemetry.combo}</small>}
+                </div>
+              )}
+              {ended && (
                 <div className="result-stats">
                   <span>
                     <b>{telemetry.score.toLocaleString("en-US")}</b>POINTS
@@ -924,6 +956,9 @@ export default function FlightLab() {
               <button className="text-button" onClick={goHome}>
                 Back to hangar
               </button>
+              {telemetry.status === "complete" && !replay && <button className="text-button" onClick={() => {
+                setMissionIndex((v) => (v+1)%missions.length); restart();
+              }}>Next course →</button>}
             </div>
           </div>
         )}

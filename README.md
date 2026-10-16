@@ -42,7 +42,10 @@ Stable versions checked against the npm registry on October 16, 2026: Next.js 16
 - Approach the runway ramp at speed for automatic liftoff. Fly through the rings in order, then land gently on the H pad below 18 km/h. A hard landing ends the flight.
 - Lift and boost consume pressure. Pressure recharges on the ground. All telemetry represents gameplay values.
 - Automatic landing assistance watches clearance above the ground or training ramp and descent speed. When needed, it spends pressure on lift and corrective jets to slow the fall and level the body. The HUD shows when it is firing, with the same white vapor and optional pneumatic sound as manual thrust. An empty tank or an unrecoverable last-second fall can still crash.
-- Four courses, free flight, four body colors, three cameras, and three graphics settings are available. Personal best and graphics quality are stored locally in the browser.
+- Five courses, free flight, four body colors, three cameras, and three graphics settings are available. Global and per-course best scores and graphics quality are stored locally in the browser.
+- Air Slalom has seven alternating rings. Pass inside the small center ring to build a combo up to five, earn 200 extra points per combo step, and recover 6 pressure. Passes above 126 km/h add another 100 points. An off-center pass breaks the combo. Gold requires at least five perfect passes and a finish under 82.5 seconds; Silver requires three perfect passes. Every successful landing earns at least Bronze.
+- The challenge HUD tracks rings, perfect passes and the current combo. A dashed flight line guides the route; the finish screen awards a medal and offers the next course.
+- Daylight is the default for clearer vehicle detail. Settings retain night mode. Higher graphics settings improve pixel density and shadows; photo textures use anisotropic filtering, and the wheels and grille include additional 3D trim.
 - Select **Enable air bursts** to hear short pneumatic valve releases during lift, boost, and attitude control. Driving alone is silent. The same sound is available during the home-screen thruster demo; there is no engine hum.
 
 ## Research and visual references
