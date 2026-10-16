@@ -172,6 +172,50 @@ svg {
   display: block;
   touch-action: none;
 }
+.official-photo {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  background: #060708;
+  pointer-events: none;
+}
+.official-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center 65%;
+}
+.photo-home .briefing { top: 24px; }
+.photo-home .weather { display: none; }
+.photo-home .location-divider, .photo-home .location-divider + span { display: none; }
+.photo-home .photo-choices button { color: #e7e9df; }
+.photo-home .photo-choices button[aria-pressed="true"] { color: #202822; }
+.photo-choices, .official-video-tabs {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+.photo-choices button, .official-video-tabs button {
+  border: 1px solid #828a80;
+  padding: 9px 12px;
+  font: 9px var(--mono);
+}
+.photo-choices button[aria-pressed="true"] {
+  background: #e8e6d7;
+  color: #202822;
+}
+.official-video-tabs { margin: 20px 0 16px; flex-wrap: wrap; }
+.official-video-tabs button[aria-pressed="true"] { background: #29372b; color: #fff; }
+.official-player { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; background: #080b0c; }
+.official-media-credit { font-size: 11px !important; }
+@media (max-width: 800px) {
+  .photo-home .briefing { top: auto; }
+  .official-photo img { width: 170%; max-width: none; transform: translateX(-34%); object-position: center 50%; }
+  .official-photo img[data-view="front"] { transform: translateX(-20%); }
+  .photo-choices { gap: 7px; margin-top: 10px; }
+  .photo-choices button { font-size: 8px; padding: 7px 10px; }
+}
 .scene-vignette {
   position: absolute;
   inset: 0;

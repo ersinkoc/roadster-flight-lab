@@ -43,6 +43,7 @@ import {
 import { STUNT_RAMP } from "../lib/stunt-ramp";
 import { STUNT_REPLAY, STUNT_REPLAY_DURATION } from "../lib/stunt-replay";
 import { AirBurstAudio, airBurstLevel } from "../lib/air-audio";
+import OfficialMedia from "./OfficialMedia";
 const World = dynamic(() => import("./World"), { ssr: false });
 const colors = [
   { name: "Ano White", hex: "#ecece5" },
@@ -174,12 +175,14 @@ export default function FlightLab() {
     [color, setColor] = useState(0),
     [quality, setQuality] = useState("balanced"),
     [night, setNight] = useState(true),
-    [demo, setDemo] = useState(true),
+    [demo, setDemo] = useState(false),
+    [homeView, setHomeView] = useState<"photo" | "3d">("photo"),
+    [photo, setPhoto] = useState(1),
     [cameraMode, setCameraMode] = useState(0),
     [reset, setReset] = useState(0),
     [replay, setReplay] = useState(false),
     [replaySeek, setReplaySeek] = useState({ time: 0, nonce: 0 }),
-    [modal, setModal] = useState<"help" | "sources" | "settings" | null>(null),
+    [modal, setModal] = useState<"help" | "sources" | "settings" | "media" | null>(null),
     [sound, setSound] = useState(false),
     [ready, setReady] = useState(false),
     [telemetry, setTelemetry] = useState(initialState),
@@ -388,7 +391,7 @@ export default function FlightLab() {
         );
   return (
     <main
-      className={`flight-app ${running ? "is-running" : ""} ${night ? "demo-night" : ""}`}
+      className={`flight-app ${running ? "is-running" : ""} ${!running && homeView === "photo" ? "photo-home" : ""} ${night || (!running && homeView === "photo") ? "demo-night" : ""}`}
     >
       <header className="topbar">
         <button className="brand" onClick={goHome} aria-label="Flight Lab home">
@@ -451,10 +454,15 @@ export default function FlightLab() {
             />
           </SceneBoundary>
         </div>
+        {!running && homeView === "photo" && <div className="official-photo">
+          <img src={photo === 1 ? "/images/tesla-roadster-side.jpg" : "/images/tesla-roadster-front.jpg"}
+            data-view={photo === 1 ? "side" : "front"}
+            alt={photo === 1 ? "Actual Tesla Roadster — official Tesla side photograph" : "Actual Tesla Roadster — official Tesla front photograph"} fetchPriority="high" />
+        </div>}
         <div className="scene-vignette" />
         <div className="location">
           <span className="live-dot" />
-          <span>BLACK ROCK DESERT</span>
+          <span>{!running && homeView === "photo" ? "TESLA / OFFICIAL PHOTOGRAPHY" : "BLACK ROCK DESERT"}</span>
           <span className="location-divider">/</span>
           <span>40.9° N · 119.1° W</span>
         </div>
@@ -484,18 +492,27 @@ export default function FlightLab() {
               </button>
               <button
                 className="watch-button"
-                onClick={() => openModal("sources")}
+                onClick={() => openModal("media")}
               >
                 <span>
                   <Play size={12} fill="currentColor" />
                 </span>
-                The real inspiration
+                Watch Tesla footage
               </button>
             </div>
 
             <div className="intro-note">
-              <MousePointer2 size={13} /> Drag to inspect the car. Scroll to zoom.
+              <MousePointer2 size={13} /> {homeView === "photo" ? "Actual Tesla photography. Image © Tesla." : "Drag to inspect the car. Scroll to zoom."}
             </div>
+            {homeView === "photo" && <div className="photo-choices">
+              <button aria-pressed={photo === 1} onClick={() => setPhoto(1)}>Side photo</button>
+              <button aria-pressed={photo === 0} onClick={() => setPhoto(0)}>Front photo</button>
+            </div>}
+            <button className="demo-trigger" onClick={() => {
+              setHomeView(homeView === "photo" ? "3d" : "photo");
+              setDemo(homeView === "photo");
+            }}>{homeView === "photo" ? "Explore 3D simulator" : "Back to Tesla photos"} <ArrowUpRight size={13} /></button>
+            {homeView === "3d" &&
             <button
               className={`demo-trigger ${demo ? "active" : ""}`}
               onClick={() => setDemo((v) => !v)}
@@ -503,6 +520,7 @@ export default function FlightLab() {
               <Wind size={14} />
               {demo ? "Stop thruster demo" : "Watch thruster demo"}
             </button>
+            }
           </div>
         )}
         {!running && (
@@ -523,7 +541,7 @@ export default function FlightLab() {
         <div className="vehicle-caption">
           <span className="tiny-square" />
           <span>ROADSTER</span>
-          <span className="caption-light">ROCKET CONCEPT</span>
+          <span className="caption-light">{!running && homeView === "photo" ? "OFFICIAL TESLA PHOTOGRAPHY" : "ROCKET CONCEPT"}</span>
           <span className="caption-line" />
         </div>
         {!running ? (
@@ -1035,7 +1053,7 @@ export default function FlightLab() {
       </p>
       <dialog
         ref={dialog}
-        className={`modal ${modal === "sources" ? "sources-modal" : ""}`}
+        className={`modal ${modal === "sources" || modal === "media" ? "sources-modal" : ""}`}
         onCancel={() => setModal(null)}
         aria-labelledby="modal-title"
       >
@@ -1046,7 +1064,7 @@ export default function FlightLab() {
         >
           <X size={20} />
         </button>
-        {modal === "help" ? (
+        {modal === "media" ? <OfficialMedia /> : modal === "help" ? (
           <>
             <span className="eyebrow">PILOT HANDBOOK / 001</span>
             <h2 id="modal-title">You are in control.</h2>

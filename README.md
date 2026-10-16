@@ -4,6 +4,8 @@ An English-language browser game inspired by the Tesla Roadster Rocket concept, 
 
 Play at [roadster-flight-lab.oxog.dev](https://roadster-flight-lab.oxog.dev).
 
+The home screen opens with actual Tesla Roadster photography, with front and side photo choices. **Watch Tesla footage** opens the official design film and ramp demonstration in an embedded player. Images and videos are credited to Tesla. Choose **Explore 3D simulator** to inspect the game model, or **Start flying** to play.
+
 An independent fan project made for fun. Not affiliated with, endorsed by, or sponsored by Tesla, Inc. Created by [@ersinkoc](https://x.com/ersinkoc).
 
 ## Run locally
