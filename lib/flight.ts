@@ -1,4 +1,5 @@
 import { STUNT_RAMP, stuntRampPoint, smoothRecovery } from "./stunt-ramp";
+import { buildingImpact } from "./buildings";
 export type Vec3 = { x: number; y: number; z: number };
 export type Input = {
   throttle: number;
@@ -319,6 +320,25 @@ export function stepFlight(
       }
     }
   }
+  const roll = input.steer * (airborne ? -0.22 : -0.05) + stunt;
+  const impact = buildingImpact(previous, p, s, { heading, pitch, roll });
+  if (impact) {
+    return {
+      ...s,
+      position: impact,
+      heading,
+      pitch,
+      roll,
+      speed: 0,
+      vertical: 0,
+      elapsed,
+      pressure,
+      peak: Math.max(s.peak, impact.y),
+      distance: s.distance + Math.hypot(impact.x - previous.x, impact.z - previous.z),
+      status: "crashed",
+      message: "You hit the building. Fly around it or climb above the roof. R to retry.",
+    };
+  }
   if (!free && status !== "crashed" && elapsed >= mission.seconds) {
     status = "crashed";
     message = "Time is up. Try the course again.";
@@ -350,7 +370,7 @@ export function stepFlight(
     peak: Math.max(s.peak, p.y),
     status,
     message,
-    roll: input.steer * (airborne ? -0.22 : -0.05) + stunt,
+    roll,
     distance,
     stunt,
     rollHeld: !!input.barrel,

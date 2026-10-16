@@ -15,6 +15,7 @@ import ThrusterEffects from "./ThrusterEffects";
 import StuntRamp from "./StuntRamp";
 import { STUNT_RAMP, smoothRecovery } from "../lib/stunt-ramp";
 import { STUNT_REPLAY } from "../lib/stunt-replay";
+import { BUILDING_PARTS } from "../lib/buildings";
 import {
   initialState,
   stepFlight,
@@ -174,18 +175,12 @@ function Desert({ night }: { night: boolean }) {
           ))}
         </group>
       ))}
-      <mesh position={[74, 3.5, 48]} castShadow>
-        <boxGeometry args={[26, 7, 14]} />
-        <meshStandardMaterial color="#a59d8d" roughness={0.9} />
-      </mesh>
-      <mesh position={[74, 7.1, 48]}>
-        <boxGeometry args={[28, 0.3, 16]} />
-        <meshStandardMaterial color="#605f57" />
-      </mesh>
-      <mesh position={[65, 2.8, 40.9]}>
-        <boxGeometry args={[5, 5, 0.1]} />
-        <meshStandardMaterial color="#484d4a" />
-      </mesh>
+      {BUILDING_PARTS.map((part) => (
+        <mesh key={part.id} position={part.position} castShadow>
+          <boxGeometry args={part.size} />
+          <meshStandardMaterial color={part.color} roughness={0.9} />
+        </mesh>
+      ))}
       <mesh position={[100, 12, 65]}>
         <cylinderGeometry args={[0.1, 0.2, 24, 8]} />
         <meshStandardMaterial color="#666d69" />
