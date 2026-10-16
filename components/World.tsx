@@ -359,7 +359,7 @@ function FlightScene(p: WorldProps) {
       }
     }
     if (p.running || !inspecting.current) {
-      camera.position.lerp(cameraTarget, p.running ? 1 - Math.exp(-delta * 5) : 0.04);
+      camera.position.lerp(cameraTarget, 1 - Math.exp(-delta * 5));
       camera.lookAt(lookTarget);
     }
     if (inspection.current && !p.running)

@@ -1,17 +1,25 @@
 "use client";
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
+import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
 
 const FRONT_AXLE = -1.56, REAR_AXLE = 1.67;
-const LAMP_SHAPE = [[0.65, 0.755, -2.09], [0.94, 0.86, -2.03], [0.79, 0.70, -2.35]];
+const LAMP_SHAPE = [[0.65, 0.74, -2.29], [0.84, 0.79, -2.23], [0.73, 0.646, -2.51]];
 // Proportions reconstructed from the white flight-demo car's front and side
 // photographs. These are visual reference coordinates, not Tesla CAD data.
-const SHOULDER = [[-2.48, 0.61], [-2.12, 0.79], [-1.8, 0.97], [-1.32, 0.96],
-  [-0.82, 0.82], [0.8, 0.85], [1.44, 0.98], [1.91, 0.96], [2.28, 0.8], [2.4, 0.7]];
-const BODY_PROFILE = [[-2.47, 0.79, 0.63, 0.27], [-2.04, 0.89, 0.75, 0.25],
-  [FRONT_AXLE, 0.79, 0.79, 0.24], [-0.82, 1.01, 0.81, 0.24],
-  [0.82, 1.02, 0.84, 0.24], [REAR_AXLE, 0.79, 0.82, 0.24], [2.3, 0.95, 0.72, 0.27]];
+// Side-photo landmarks: nose, wheel crowns, continuous rising belt, rear deck.
+// The belt does not dip between the wheels like the earlier red concept.
+const SHOULDER = [[-2.48, 0.56], [-2.12, 0.76], [-1.8, 0.91], [-1.32, 0.95],
+  [-0.82, 0.96], [0.8, 1.04], [1.44, 1.05], [1.91, 1.01], [2.28, 0.96], [2.4, 0.94]];
+const BODY_PROFILE = [[-2.48, 0.67, 0.64, 0.23], [-2.04, 0.73, 0.76, 0.23],
+  [FRONT_AXLE, 0.76, 0.87, 0.23], [-1.12, 0.83, 0.90, 0.23],
+  [0.82, 0.84, 0.96, 0.23], [REAR_AXLE, 0.80, 0.99, 0.23], [2.4, 0.76, 0.94, 0.25]];
+
+const CABIN = {
+  base: [0.85, 0.91, -1.32], front: [0.73, 1.29, -0.30],
+  rear: [0.74, 1.31, 0.57], tail: [0.91, 1.045, 1.19],
+};
 
 function panels(faces: number[][][]) {
   const vertices: number[] = [];
@@ -23,32 +31,27 @@ function panels(faces: number[][][]) {
   return g;
 }
 function canopy() {
+  const {base: b, front: f, rear: r, tail: t} = CABIN;
+  const point = (p: number[], s: number) => [p[0]*s, p[1], p[2]];
   return panels([
-    // Separate planes give this car its broad windshield and low, flat roof.
-    [[-0.79,0.84,-1.24],[0.79,0.84,-1.24],[0.68,1.26,-0.48],[-0.68,1.26,-0.48]],
-    [[-0.68,1.26,-0.48],[0.68,1.26,-0.48],[0.70,1.27,0.66],[-0.70,1.27,0.66]],
-    [[-0.70,1.27,0.66],[0.70,1.27,0.66],[0.79,0.88,1.48],[-0.79,0.88,1.48]],
-    ...[-1,1].map((s) => [[s*0.79,0.84,-1.24],[s*0.68,1.26,-0.48],
-      [s*0.70,1.27,0.66],[s*0.83,0.96,1.23],[s*0.88,0.85,0.9]]),
+    [point(b,-1),point(b,1),point(f,1),point(f,-1)],
+    [point(f,-1),point(f,1),point(r,1),point(r,-1)],
+    [point(r,-1),point(r,1),[0.78,1.02,1.47],[-0.78,1.02,1.47]],
+    ...[-1,1].map((s) => [point(b,s),point(f,s),point(r,s),point(t,s),
+      [s*0.955,0.99,0.55],[s*0.963,0.925,-0.72]]),
   ]);
 }
 function pillar(side: number) {
-  const points = [[side*0.79,0.84,-1.24],[side*0.68,1.26,-0.48],
-    [side*0.70,1.27,0.66],[side*0.83,0.96,1.23]];
+  const points = [CABIN.base, CABIN.front, CABIN.rear, CABIN.tail]
+    .map(([x,y,z]) => [side*x,y,z]);
   const path = new THREE.CurvePath<THREE.Vector3>();
   for (let i = 1; i < points.length; i++)
     path.add(new THREE.LineCurve3(new THREE.Vector3(...points[i-1] as [number,number,number]),
       new THREE.Vector3(...points[i] as [number,number,number])));
-  return new THREE.TubeGeometry(path, 64, 0.018, 8, false);
+  return new THREE.TubeGeometry(path, 64, 0.012, 8, false);
 }
 
 function shell(stations: number[][]) {
-  const profile = new THREE.CatmullRomCurve3(stations.map(([z, w, h]) => new THREE.Vector3(z, w, h)), false, "centripetal");
-  const bottom = new THREE.CatmullRomCurve3(stations.map(([z, , , b]) => new THREE.Vector3(z, b, 0)), false, "centripetal");
-  stations = Array.from({ length: 65 }, (_, i) => {
-    const p = profile.getPoint(i / 64), b = bottom.getPoint(i / 64);
-    return [p.x, p.y, p.z, b.y];
-  });
   const vertices: number[] = [],
     indices: number[] = [];
   for (const [z, w, h, b] of stations)
@@ -83,17 +86,16 @@ function shell(stations: number[][]) {
 function fender(side: number) {
   const vertices: number[] = [], indices: number[] = [];
   for (let i = 0; i <= 128; i++) for (let j = 0; j <= 6; j++) {
-    const t = j / 6, z = -2.47 + i / 128 * 4.77;
+    const t = j / 6, z = -2.48 + i / 128 * 4.88;
     const k = Math.max(1, SHOULDER.findIndex((p) => p[0] >= z));
     const lo = SHOULDER[k - 1], hi = SHOULDER[k];
     const shoulder = THREE.MathUtils.lerp(lo[1], hi[1], (z - lo[0]) / (hi[0] - lo[0]));
     const found = BODY_PROFILE.findIndex((p) => p[0] >= z);
     const h = found < 0 ? BODY_PROFILE.length - 1 : Math.max(1, found);
     const a = BODY_PROFILE[h - 1], b = BODY_PROFILE[h];
-    const hood = THREE.MathUtils.lerp(a[2], b[2], (z - a[0]) / (b[0] - a[0])) - 0.04;
+    const hood = THREE.MathUtils.lerp(a[2], b[2], (z - a[0]) / (b[0] - a[0]));
     const taper = z < -2.05 ? 1 - (-z - 2.05) * 0.19 : z > 2.2 ? 1 - (z - 2.2) * 0.18 : 1;
-    const height = t <= 1/3 ? shoulder + t * 0.036 :
-      THREE.MathUtils.lerp(shoulder + 0.012, hood, (t - 1/3) * 1.5);
+    const height = THREE.MathUtils.lerp(shoulder, hood, t);
     vertices.push(side * (1.045 * taper * (1 - t) + 0.54 * t), height, z);
     if (i < 128 && j < 6) {
       const n = i * 7 + j;
@@ -106,41 +108,11 @@ function fender(side: number) {
   g.computeVertexNormals();
   return g;
 }
-function aeroBlade() {
-  const shape = new THREE.Shape();
-  for (let i = 0; i <= 12; i++) {
-    const a = -0.23 + i / 12 * 0.78;
-    const x = Math.sin(a) * 0.326, z = Math.cos(a) * 0.326;
-    if (i === 0) shape.moveTo(x, z); else shape.lineTo(x, z);
-  }
-  for (let i = 12; i >= 0; i--) {
-    const a = 0.02 + i / 12 * 0.52;
-    shape.lineTo(Math.sin(a) * 0.09, Math.cos(a) * 0.09);
-  }
-  shape.closePath();
-  const g = new THREE.ExtrudeGeometry(shape, { depth: 0.012, bevelEnabled: true, bevelSize: 0.004, bevelThickness: 0.003, bevelSegments: 2, steps: 1 });
-  g.rotateX(Math.PI / 2);
-  return g;
-}
-function led(side: number) {
-  const [a,b,c] = LAMP_SHAPE.map(([x,y,z]) => new THREE.Vector3(side*x, y+0.004, z-0.006));
-  const vertices: number[] = [];
-  const quad = (p: THREE.Vector3, q: THREE.Vector3, r: THREE.Vector3, s: THREE.Vector3) => vertices.push(...p.toArray(), ...q.toArray(), ...r.toArray(), ...p.toArray(), ...r.toArray(), ...s.toArray());
-  quad(a, b, b.clone().lerp(c, 0.1), a.clone().lerp(c, 0.1));
-  for (let i = 0; i < 5; i++) {
-    const p = a.clone().lerp(b, (i + 0.2) / 5), q = a.clone().lerp(b, (i + 0.6) / 5);
-    quad(p, q, q.clone().lerp(c, 0.5), p.clone().lerp(c, 0.5));
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
-  g.computeVertexNormals();
-  return g;
-}
 function sidePanel(side: number) {
   const shape = new THREE.Shape();
   const points = [
     ...SHOULDER,
-    [2.4, 0.26],
+    [2.4, 0.72],
     [REAR_AXLE + 0.49, 0.26],
     [REAR_AXLE + 0.49, 0.45],
   ];
@@ -175,7 +147,8 @@ function sidePanel(side: number) {
     const z = p.getZ(i),
       taper =
         z < -2.05 ? 1 - (-z - 2.05) * 0.19 : z > 2.2 ? 1 - (z - 2.2) * 0.18 : 1;
-    p.setX(i, p.getX(i) * taper);
+    const waist = Math.max(0, 0.93-p.getY(i))*0.10;
+    p.setX(i, (p.getX(i)-side*waist) * taper);
   }
   g.computeVertexNormals();
   return g;
@@ -189,7 +162,21 @@ function lines(points: number[][]) {
   return g;
 }
 function lamp(side: number) {
-  return panels([LAMP_SHAPE.map(([x,y,z]) => [side*x,y,z])]);
+  const g = panels([LAMP_SHAPE.map(([x,y,z]) => [side*x,y,z])]);
+  // UVs trace the actual triangular lens in Tesla's front photograph.
+  g.setAttribute("uv", new THREE.Float32BufferAttribute([
+    790/2048,1-503/968, 720/2048,1-494/968, 758/2048,1-558/968,
+  ],2));
+  return g;
+}
+function photographedWheel() {
+  // Only the circular alloy face is sampled; the tire, depth and rotation stay 3D.
+  const g = new THREE.CircleGeometry(0.342, 64);
+  const p = g.attributes.position, uv = g.attributes.uv;
+  for (let i=0;i<p.count;i++) uv.setXY(i,
+    (1018 + p.getX(i)/0.342*64)/2048,
+    1-(412-p.getY(i)/0.342*65)/610);
+  return g;
 }
 
 export default function Roadster({
@@ -200,6 +187,9 @@ export default function Roadster({
   speed?: number;
 }) {
   const wheels = useRef<(THREE.Group | null)[]>([]);
+  const [wheelPhoto, lampPhoto] = useTexture([
+    "/images/tesla-roadster-side.jpg", "/images/tesla-roadster-front.jpg",
+  ]);
   useFrame((_, delta) => {
     for (const wheel of wheels.current)
       if (wheel) wheel.rotation.y -= (speed / 0.431) * Math.min(delta, 0.05);
@@ -208,24 +198,28 @@ export default function Roadster({
     () => ({
       body: shell(BODY_PROFILE),
       glass: canopy(),
-      intake: panels([[[-0.72,0.60,-2.49],[0.72,0.60,-2.49],
-        [0.83,0.24,-2.50],[-0.83,0.24,-2.50]]]),
-      rearPillars: panels([-1,1].map((s) => [[s*0.70,1.27,0.66],[s*0.96,0.85,1.55],
-        [s*0.99,0.85,1.2],[s*0.83,0.96,1.23]])),
+      intake: panels([[[-0.72,0.64,-2.536],[0.72,0.64,-2.536],
+        [0.83,0.24,-2.536],[-0.83,0.24,-2.536]]]),
+      rearPillars: panels([-1,1].map((s) => [[s*0.74,1.31,0.57],[s*0.97,1.035,1.70],
+        [s*1.01,1.035,1.19],[s*0.91,1.045,1.19]])),
+      belt: panels([-1,1].map((s) => [[s*0.85,0.91,-1.32],[s*0.963,0.925,-0.72],
+        [s*0.955,0.99,0.55],[s*0.91,1.045,1.19],
+        [s*1.043,1.04,1.19],[s*1.043,0.91,-0.94]])),
+      wheelFace: photographedWheel(),
+      cheeks: panels([-1,1].map(s => [[s*0.72,0.64,-2.536],
+        [s*0.965,0.56,-2.536],[s*0.965,0.25,-2.536],[s*0.83,0.24,-2.536]])),
       sides: [sidePanel(-1), sidePanel(1)],
       fenders: [fender(-1), fender(1)],
-      aero: aeroBlade(),
-      leds: [led(-1), led(1)],
       pillars: [-1, 1].map((s) => lines([
-        [s * 0.87, 0.87, 0.58], [s * 0.70, 1.266, 0.56],
+        [s * 0.953, 0.995, 0.46], [s * 0.739, 1.309, 0.40],
       ])),
       seams: [-1, 1].map((s) =>
         lines([
-          [s * 1.048, 0.82, -0.9],
+          [s * 1.048, 0.91, -0.94],
           [s * 1.048, 0.4, -0.76],
           [s * 1.048, 0.29, -0.7],
           [s * 1.048, 0.29, 0.99],
-          [s * 1.048, 0.83, 1.15],
+          [s * 1.048, 1.035, 0.46],
         ]),
       ),
       hood: lines([
@@ -257,7 +251,7 @@ export default function Roadster({
           clearcoatRoughness={0.07}
         />
       </mesh>
-      {[...geometries.sides, ...geometries.fenders, geometries.rearPillars].map((g, i) => (
+      {[...geometries.sides, ...geometries.fenders, geometries.rearPillars, geometries.belt, geometries.cheeks].map((g, i) => (
         <mesh key={i} geometry={g} castShadow receiveShadow>
           <meshPhysicalMaterial
             color={color}
@@ -271,12 +265,12 @@ export default function Roadster({
       ))}
       <mesh geometry={geometries.glass} renderOrder={1}>
         <meshPhysicalMaterial
-          color="#282218"
+          color="#211c19"
           metalness={0}
           roughness={0.18}
-          envMapIntensity={0.25}
-          reflectivity={0.25}
-          clearcoat={0.15}
+          envMapIntensity={0.7}
+          reflectivity={0.4}
+          clearcoat={0.45}
           clearcoatRoughness={0.04}
           side={THREE.DoubleSide}
         />
@@ -344,7 +338,7 @@ export default function Roadster({
         <boxGeometry args={[1.84, 0.045, 0.24]} />
         <meshStandardMaterial color="#131b22" roughness={0.5} />
       </mesh>
-      <mesh position={[0, 0.608, -2.505]}>
+      <mesh position={[0, 0.642, -2.54]}>
         <boxGeometry args={[1.43, 0.014, 0.018]} />
         <meshStandardMaterial
           color="#c9ccca"
@@ -355,16 +349,15 @@ export default function Roadster({
       {geometries.lamps.map((g, i) => (
         <mesh key={i} geometry={g}>
           <meshStandardMaterial
-            color="#26333c"
-            metalness={0.45}
-            roughness={0.16}
+            map={lampPhoto}
+            emissiveMap={lampPhoto}
+            emissive="#ffffff"
+            emissiveIntensity={0.6}
+            roughness={0.2}
             side={THREE.DoubleSide}
           />
         </mesh>
       ))}
-      {geometries.leds.map((g, i) => <mesh key={i} geometry={g}>
-        <meshStandardMaterial color="#eaf4ff" emissive="#eaf4ff" emissiveIntensity={1.3} side={THREE.DoubleSide} />
-      </mesh>)}
       {[-1, 1].map((side, sideIndex) => (
         <group key={side}>
           <mesh position={[side * 1.047, 0.26, 0.02]}>
@@ -380,10 +373,10 @@ export default function Roadster({
             />
           </mesh>
           <mesh
-            position={[side * 1.068, 0.94, -0.69]}
+            position={[side * 1.035, 0.91, -0.94]}
             rotation={[0, side * -0.2, 0]}
           >
-            <boxGeometry args={[0.21, 0.045, 0.16]} />
+            <boxGeometry args={[0.07, 0.022, 0.25]} />
             <meshPhysicalMaterial
               color={color}
               metalness={0.3}
@@ -446,39 +439,11 @@ export default function Roadster({
                   roughness={0.55}
                 />
               </mesh>
-              {Array.from({ length: 5 }, (_, i) => (
-                <group key={i} rotation={[0, (i * Math.PI * 2) / 5, 0]}>
-                  <mesh geometry={geometries.aero} position={[0, -side * 0.155, 0]}>
-                    <meshStandardMaterial color="#8b9398" metalness={0.9} roughness={0.27} side={THREE.DoubleSide} />
-                  </mesh>
-                  {[-1, 1].map((fork) => (
-                    <mesh
-                      key={fork}
-                      position={[fork * 0.024, -side * 0.16, 0.18]}
-                      rotation={[0, fork * 0.1, 0]}
-                    >
-                      <boxGeometry args={[0.025, 0.026, 0.31]} />
-                      <meshStandardMaterial
-                        color="#252d33"
-                        metalness={0.9}
-                        roughness={0.25}
-                      />
-                    </mesh>
-                  ))}
-                </group>
-              ))}
-              <mesh position={[0, -side * 0.18, 0]}>
-                <cylinderGeometry args={[0.065, 0.065, 0.023, 16]} />
-                <meshStandardMaterial
-                  color="#303b43"
-                  metalness={0.8}
-                  roughness={0.3}
-                />
+              <mesh geometry={geometries.wheelFace} position={[0,-side*0.205,0]}
+                rotation={[side*Math.PI/2,0,0]}>
+                <meshStandardMaterial map={wheelPhoto} roughness={0.32} metalness={0.15}
+                  emissiveMap={wheelPhoto} emissive="#ffffff" emissiveIntensity={0.18} />
               </mesh>
-              {Array.from({ length: 5 }, (_, i) => <mesh key={`bolt-${i}`} position={[Math.sin(i * Math.PI * 2 / 5) * 0.045, -side * 0.196, Math.cos(i * Math.PI * 2 / 5) * 0.045]}>
-                <cylinderGeometry args={[0.009, 0.009, 0.008, 6]} />
-                <meshStandardMaterial color="#a8afb1" metalness={0.9} roughness={0.22} />
-              </mesh>)}
               </group>
             </group>
           ))}
