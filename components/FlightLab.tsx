@@ -384,7 +384,7 @@ export default function FlightLab() {
     },
   });
   const next = mission.gates[telemetry.nextGate];
-  const rampTarget = mission.id === "stunt" && !telemetry.stuntLaunched;
+  const rampTarget = !free && mission.id === "stunt" && !telemetry.stuntLaunched;
   const targetDistance = rampTarget
     ? Math.round(
         Math.hypot(
@@ -510,7 +510,7 @@ export default function FlightLab() {
             </p>
             <div className="intro-actions">
               <button className="primary" onClick={launch} disabled={!ready}>
-                {ready ? "Start flying" : "Preparing flight"}{" "}
+                {ready ? free ? "Explore freely" : mission.id === "stunt" ? "Ride roller-coaster" : "Start mission" : "Preparing flight"}{" "}
                 <ArrowUpRight size={19} />
               </button>
               <button
@@ -547,8 +547,14 @@ export default function FlightLab() {
           </div>
         )}
         {!running && (
+          <button className="stunt-trigger" disabled={!ready} onClick={() => {
+            setMissionIndex(missions.findIndex(m => m.id === "stunt"));
+            setFree(false); setReplay(false); setDemo(false); restart(); setRunning(true);
+          }}>Drive roller-coaster <ArrowUpRight size={14} /></button>
+        )}
+        {!running && (
           <button
-            className="stunt-trigger"
+            className="stunt-preview"
             onClick={() => {
               setMissionIndex(missions.length - 1);
               setFree(false);
@@ -598,7 +604,7 @@ export default function FlightLab() {
                 <h2>{free ? "Explore the limits" : mission.name}</h2>
                 <p>
                   {free
-                    ? "No objectives. Just you and the sky."
+                    ? "East apron start. No rings, timer, or landing target. Explore the same open test range."
                     : mission.subtitle}
                 </p>
                 {mission.challenge && !free && <p className="challenge-brief">Center passes build a ×5 combo and restore air. Gold: 5 perfect passes in under 82.5s.</p>}
@@ -652,6 +658,7 @@ export default function FlightLab() {
                     className={!free ? "active" : ""}
                     onClick={() => {
                       setFree(false);
+                      setHomeView("3d");
                       restart();
                     }}
                   >
@@ -661,6 +668,7 @@ export default function FlightLab() {
                     className={free ? "active" : ""}
                     onClick={() => {
                       setFree(true);
+                      setHomeView("3d");
                       restart();
                     }}
                   >
@@ -705,6 +713,7 @@ export default function FlightLab() {
               <h2>
                 {paused
                   ? "Flight on hold."
+                  : free ? "Your own route. Your own pace."
                   : mission.id === "stunt"
                     ? telemetry.rampProgress >= 0
                       ? "Grip beyond gravity."
@@ -758,10 +767,10 @@ export default function FlightLab() {
               </div>
               <div className="panel-row">
                 <span>
-                  {mission.id === "stunt" ? "FLIP RECOVERY" : "RINGS"}
+                  {free ? "FLIGHT AREA" : mission.id === "stunt" ? "FLIP RECOVERY" : "RINGS"}
                 </span>
                 <b>
-                  {mission.id === "stunt"
+                  {free ? "OPEN RANGE" : mission.id === "stunt"
                     ? telemetry.flipComplete
                       ? "STABLE"
                       : telemetry.rampProgress >= 0
@@ -781,6 +790,13 @@ export default function FlightLab() {
                 </b>
               </div>
             </aside>
+            {rampTarget && <div className="ramp-guide" aria-label="Roller-coaster approach">
+              <b>HOLD W / ACCELERATE</b>
+              <span>Stay straight. Keep SPACE / FLY released.</span>
+              <progress value={Math.min(STUNT_RAMP.minSpeed,telemetry.speed)} max={STUNT_RAMP.minSpeed} />
+              <strong>{Math.round(telemetry.speed*3.6)} / 87 km/h · {telemetry.rampProgress >= 0 ? "GRIP ENGAGED" : telemetry.speed >= STUNT_RAMP.minSpeed ? "ENTRY SPEED READY" : "BUILD SPEED"}</strong>
+              <small>The curve grips automatically. After the flip, S / BRAKE to land.</small>
+            </div>}
             <div className="flight-reticle">
               <span />
               <i />

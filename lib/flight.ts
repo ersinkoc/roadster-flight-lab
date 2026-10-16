@@ -122,9 +122,9 @@ export type FlightState = {
   rewardAt: number;
   rewardPoints: number;
 };
-export function initialState(): FlightState {
+export function initialState(mission?: Mission, free = false): FlightState {
   return {
-    position: { x: 0, y: 0, z: 24 },
+    position: { x: free ? 32 : mission?.id === "stunt" ? STUNT_RAMP.x : 0, y: 0, z: free ? 60 : 24 },
     heading: 0,
     speed: 0,
     vertical: 0,
@@ -134,7 +134,9 @@ export function initialState(): FlightState {
     score: 0,
     peak: 0,
     status: "ready",
-    message: "The runway is yours. W to accelerate, SPACE to climb.",
+    message: free ? "FREE FLIGHT — explore from the east apron. W to drive, SPACE to fly. No timer or objectives." :
+      mission?.id === "stunt" ? "ROLLER-COASTER — hold W straight ahead. Keep SPACE released until the curve. Reach 87+ km/h; flip recovery is automatic, then S to brake." :
+      "The runway is yours. W to accelerate, SPACE to climb.",
     roll: 0,
     distance: 0,
     stunt: 0,

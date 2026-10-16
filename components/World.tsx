@@ -239,15 +239,10 @@ function FlightScene(p: WorldProps) {
   const lookTarget = useMemo(() => new THREE.Vector3(), []);
   useEffect(() => {
     inspecting.current = false;
-    state.current = initialState();
-    if (p.running && p.mission.id === "stunt") {
-      state.current.position.x = STUNT_RAMP.x;
-      state.current.message =
-        "STUNT RAMP — hold W. Reach 87+ km/h. Flip recovery is automatic; S to brake for landing.";
-    }
+    state.current = initialState(p.mission, p.free);
     timer.current = 0;
     p.onTelemetry(state.current, 0);
-  }, [p.reset, p.mission, p.onTelemetry, p.demo, p.running]);
+  }, [p.reset, p.mission, p.free, p.onTelemetry, p.demo, p.running]);
   useEffect(() => {
     if (p.replay) {
       replayClock.current = p.replaySeek.time;
@@ -355,12 +350,13 @@ function FlightScene(p: WorldProps) {
         pos.z - Math.cos(h) * 9,
       );
       if (p.mission.id === "stunt" && p.cameraMode !== 1) {
-        cameraTarget.set(
-          pos.x + (s.stuntLaunched ? 10 : 24),
-          pos.y + (s.stuntLaunched ? 4 : 11),
-          pos.z + (s.stuntLaunched ? 12 : 20),
-        );
-        lookTarget.set(pos.x, pos.y + 1, pos.z);
+        if (!p.free && !s.stuntLaunched && s.rampProgress < 0) {
+          cameraTarget.set(pos.x, pos.y + 3.2, pos.z + 10);
+          lookTarget.set(pos.x, pos.y + 3, pos.z - 22);
+        } else if (!p.free) {
+          cameraTarget.set(pos.x + 10, pos.y + 4, pos.z + 12);
+          lookTarget.set(pos.x, pos.y + 1, pos.z);
+        }
       }
     }
     if (p.running || !inspecting.current) {
@@ -522,7 +518,7 @@ function FlightScene(p: WorldProps) {
             </mesh>
           </group>
         ))}
-      <group position={[p.mission.landing.x, 0.03, p.mission.landing.z]}>
+      {!p.free && <group position={[p.mission.landing.x, 0.03, p.mission.landing.z]}>
         <mesh rotation={[-Math.PI / 2, 0, 0]}>
           <circleGeometry args={[23, 64]} />
           <meshStandardMaterial color="#929c86" roughness={1} />
@@ -541,7 +537,7 @@ function FlightScene(p: WorldProps) {
             <meshBasicMaterial color="#e7e4d1" />
           </mesh>
         ))}
-      </group>
+      </group>}
     </>
   );
 }
