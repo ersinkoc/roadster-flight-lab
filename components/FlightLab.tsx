@@ -1021,6 +1021,13 @@ export default function FlightLab() {
           <span className="footer-version">v1.0</span>
         </div>
       </footer>
+      <p className="project-credit">
+        An independent fan project made for fun. Not affiliated with, endorsed
+        by, or sponsored by Tesla, Inc. Created by{" "}
+        <a href="https://x.com/ersinkoc" target="_blank" rel="noopener noreferrer">
+          @ersinkoc
+        </a>.
+      </p>
       <dialog
         ref={dialog}
         className={`modal ${modal === "sources" ? "sources-modal" : ""}`}

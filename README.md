@@ -4,6 +4,8 @@ An English-language browser game inspired by the Tesla Roadster Rocket concept, 
 
 Play at [roadster-flight-lab.oxog.dev](https://roadster-flight-lab.oxog.dev).
 
+An independent fan project made for fun. Not affiliated with, endorsed by, or sponsored by Tesla, Inc. Created by [@ersinkoc](https://x.com/ersinkoc).
+
 ## Run locally
 
 ```sh
