@@ -3,7 +3,19 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
+const SHOULDER = [[-2.48, 0.61], [-2.12, 0.79], [-1.7, 0.97], [-1.28, 0.96],
+  [-0.82, 0.82], [0.8, 0.85], [1.25, 0.98], [1.7, 0.98], [2.28, 0.8], [2.4, 0.7]];
+const BODY_PROFILE = [[-2.47, 0.79, 0.63, 0.27], [-2.04, 0.89, 0.75, 0.25],
+  [-1.48, 0.81, 0.79, 0.24], [-0.82, 1.01, 0.81, 0.24],
+  [0.82, 1.02, 0.84, 0.24], [1.48, 0.81, 0.82, 0.24], [2.3, 0.95, 0.72, 0.27]];
+
 function shell(stations: number[][]) {
+  const profile = new THREE.CatmullRomCurve3(stations.map(([z, w, h]) => new THREE.Vector3(z, w, h)), false, "centripetal");
+  const bottom = new THREE.CatmullRomCurve3(stations.map(([z, , , b]) => new THREE.Vector3(z, b, 0)), false, "centripetal");
+  stations = Array.from({ length: 65 }, (_, i) => {
+    const p = profile.getPoint(i / 64), b = bottom.getPoint(i / 64);
+    return [p.x, p.y, p.z, b.y];
+  });
   const vertices: number[] = [],
     indices: number[] = [];
   for (const [z, w, h, b] of stations)
@@ -35,19 +47,66 @@ function shell(stations: number[][]) {
   g.computeVertexNormals();
   return g;
 }
+function fender(side: number) {
+  const vertices: number[] = [], indices: number[] = [];
+  for (let i = 0; i <= 128; i++) for (let j = 0; j <= 6; j++) {
+    const t = j / 6, z = -2.47 + i / 128 * 4.77;
+    const k = Math.max(1, SHOULDER.findIndex((p) => p[0] >= z));
+    const lo = SHOULDER[k - 1], hi = SHOULDER[k];
+    const shoulder = THREE.MathUtils.lerp(lo[1], hi[1], (z - lo[0]) / (hi[0] - lo[0]));
+    const found = BODY_PROFILE.findIndex((p) => p[0] >= z);
+    const h = found < 0 ? BODY_PROFILE.length - 1 : Math.max(1, found);
+    const a = BODY_PROFILE[h - 1], b = BODY_PROFILE[h];
+    const hood = THREE.MathUtils.lerp(a[2], b[2], (z - a[0]) / (b[0] - a[0])) - 0.04;
+    const taper = z < -2.05 ? 1 - (-z - 2.05) * 0.19 : z > 2.2 ? 1 - (z - 2.2) * 0.18 : 1;
+    vertices.push(side * (1.045 * taper * (1 - t) + 0.54 * t), shoulder * (1 - t) + hood * t + Math.sin(t * Math.PI) * 0.025, z);
+    if (i < 128 && j < 6) {
+      const n = i * 7 + j;
+      indices.push(n, n + 7, n + 1, n + 1, n + 7, n + 8);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+  g.setIndex(side > 0 ? indices : indices.reverse());
+  g.computeVertexNormals();
+  return g;
+}
+function aeroBlade() {
+  const shape = new THREE.Shape();
+  for (let i = 0; i <= 12; i++) {
+    const a = -0.23 + i / 12 * 0.78;
+    const x = Math.sin(a) * 0.326, z = Math.cos(a) * 0.326;
+    if (i === 0) shape.moveTo(x, z); else shape.lineTo(x, z);
+  }
+  for (let i = 12; i >= 0; i--) {
+    const a = 0.02 + i / 12 * 0.52;
+    shape.lineTo(Math.sin(a) * 0.09, Math.cos(a) * 0.09);
+  }
+  shape.closePath();
+  const g = new THREE.ExtrudeGeometry(shape, { depth: 0.012, bevelEnabled: true, bevelSize: 0.004, bevelThickness: 0.003, bevelSegments: 2, steps: 1 });
+  g.rotateX(Math.PI / 2);
+  return g;
+}
+function led(side: number) {
+  const a = new THREE.Vector3(side * 0.67, 0.78, -2.115);
+  const b = new THREE.Vector3(side * 0.96, 0.8, -2.065);
+  const c = new THREE.Vector3(side * 0.79, 0.63, -2.275);
+  const vertices: number[] = [];
+  const quad = (p: THREE.Vector3, q: THREE.Vector3, r: THREE.Vector3, s: THREE.Vector3) => vertices.push(...p.toArray(), ...q.toArray(), ...r.toArray(), ...p.toArray(), ...r.toArray(), ...s.toArray());
+  quad(a, b, b.clone().lerp(c, 0.1), a.clone().lerp(c, 0.1));
+  for (let i = 0; i < 5; i++) {
+    const p = a.clone().lerp(b, (i + 0.2) / 5), q = a.clone().lerp(b, (i + 0.6) / 5);
+    quad(p, q, q.clone().lerp(c, 0.5), p.clone().lerp(c, 0.5));
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+  g.computeVertexNormals();
+  return g;
+}
 function sidePanel(side: number) {
   const shape = new THREE.Shape();
   const points = [
-    [-2.48, 0.61],
-    [-2.12, 0.79],
-    [-1.7, 0.97],
-    [-1.28, 0.96],
-    [-0.82, 0.82],
-    [0.8, 0.85],
-    [1.25, 0.98],
-    [1.7, 0.98],
-    [2.28, 0.8],
-    [2.4, 0.7],
+    ...SHOULDER,
     [2.4, 0.26],
     [1.97, 0.26],
     [1.97, 0.45],
@@ -129,19 +188,11 @@ export default function Roadster({
   const wheels = useRef<(THREE.Group | null)[]>([]);
   useFrame((_, delta) => {
     for (const wheel of wheels.current)
-      if (wheel) wheel.rotation.x -= (speed / 0.431) * Math.min(delta, 0.05);
+      if (wheel) wheel.rotation.y -= (speed / 0.431) * Math.min(delta, 0.05);
   });
   const geometries = useMemo(
     () => ({
-      body: shell([
-        [-2.47, 0.79, 0.63, 0.27],
-        [-2.04, 0.89, 0.75, 0.25],
-        [-1.48, 0.81, 0.79, 0.24],
-        [-0.82, 1.01, 0.81, 0.24],
-        [0.82, 1.02, 0.84, 0.24],
-        [1.48, 0.81, 0.82, 0.24],
-        [2.3, 0.95, 0.72, 0.27],
-      ]),
+      body: shell(BODY_PROFILE),
       glass: shell([
         [-1.26, 0.77, 0.84, 0.77],
         [-0.36, 0.71, 1.3, 0.81],
@@ -149,6 +200,12 @@ export default function Roadster({
         [1.48, 0.79, 0.88, 0.79],
       ]),
       sides: [sidePanel(-1), sidePanel(1)],
+      fenders: [fender(-1), fender(1)],
+      aero: aeroBlade(),
+      leds: [led(-1), led(1)],
+      pillars: [-1, 1].map((s) => lines([
+        [s * 0.795, 0.86, 0.64], [s * 0.72, 1.3, 0.57],
+      ])),
       seams: [-1, 1].map((s) =>
         lines([
           [s * 1.048, 0.82, -0.9],
@@ -195,30 +252,71 @@ export default function Roadster({
       <mesh geometry={geometries.body} castShadow receiveShadow>
         <meshPhysicalMaterial
           color={color}
-          metalness={0.28}
-          roughness={0.26}
+          metalness={0.32}
+          roughness={0.19}
           clearcoat={1}
-          clearcoatRoughness={0.12}
+          clearcoatRoughness={0.07}
         />
       </mesh>
-      {geometries.sides.map((g, i) => (
+      {[...geometries.sides, ...geometries.fenders].map((g, i) => (
         <mesh key={i} geometry={g} castShadow receiveShadow>
           <meshPhysicalMaterial
             color={color}
-            metalness={0.28}
-            roughness={0.26}
+            metalness={0.32}
+            roughness={0.19}
             clearcoat={1}
+            clearcoatRoughness={0.07}
+            side={THREE.DoubleSide}
           />
         </mesh>
       ))}
-      <mesh geometry={geometries.glass} castShadow>
+      <mesh geometry={geometries.glass} renderOrder={1}>
         <meshPhysicalMaterial
-          color="#63563b"
-          metalness={0.42}
-          roughness={0.105}
+          color="#514b39"
+          metalness={0.15}
+          roughness={0.07}
           clearcoat={1}
+          clearcoatRoughness={0.04}
+          transparent
+          opacity={0.84}
+          depthWrite={false}
         />
       </mesh>
+      <mesh position={[0, 0.8, 0.1]}>
+        <boxGeometry args={[1.45, 0.04, 1.8]} />
+        <meshStandardMaterial color="#11191d" roughness={0.85} />
+      </mesh>
+      {[-0.34, 0.34].map((x) => (
+        <group key={x} position={[x, 0.91, 0.32]}>
+          <mesh position={[0, 0.06, 0.18]} rotation={[-0.16, 0, 0]}>
+            <capsuleGeometry args={[0.13, 0.17, 6, 12]} />
+            <meshStandardMaterial color="#242c2c" roughness={0.8} />
+          </mesh>
+          <mesh position={[0, -0.05, -0.02]}>
+            <boxGeometry args={[0.31, 0.08, 0.43]} />
+            <meshStandardMaterial color="#20292a" roughness={0.8} />
+          </mesh>
+          <mesh position={[0, 0.25, 0.2]}>
+            <boxGeometry args={[0.17, 0.13, 0.09]} />
+            <meshStandardMaterial color="#222a2b" roughness={0.75} />
+          </mesh>
+        </group>
+      ))}
+      <mesh position={[0, 0.88, -0.65]} rotation={[0.1, 0, 0]}>
+        <boxGeometry args={[1.3, 0.09, 0.27]} />
+        <meshStandardMaterial color="#141c20" roughness={0.65} />
+      </mesh>
+      <mesh position={[-0.34, 1.01, -0.47]} rotation={[-0.35, 0, 0]}>
+        <torusGeometry args={[0.105, 0.012, 8, 24]} />
+        <meshStandardMaterial color="#141b20" roughness={0.55} />
+      </mesh>
+      <mesh position={[-0.34, 0.99, -0.475]}>
+        <boxGeometry args={[0.18, 0.022, 0.018]} />
+        <meshStandardMaterial color="#6d777b" metalness={0.8} roughness={0.3} />
+      </mesh>
+      {geometries.pillars.map((g, i) => <lineSegments key={i} geometry={g}>
+        <lineBasicMaterial color="#1c252b" />
+      </lineSegments>)}
       {geometries.frames.map((g, i) => (
         <mesh key={i} geometry={g}>
           <meshPhysicalMaterial color={color} metalness={0.4} roughness={0.2} />
@@ -255,13 +353,16 @@ export default function Roadster({
       {geometries.lamps.map((g, i) => (
         <mesh key={i} geometry={g}>
           <meshStandardMaterial
-            color="#e8f4ff"
-            emissive="#e8f4ff"
-            emissiveIntensity={1.4}
+            color="#26333c"
+            metalness={0.45}
+            roughness={0.16}
             side={THREE.DoubleSide}
           />
         </mesh>
       ))}
+      {geometries.leds.map((g, i) => <mesh key={i} geometry={g}>
+        <meshStandardMaterial color="#eaf4ff" emissive="#eaf4ff" emissiveIntensity={1.3} side={THREE.DoubleSide} />
+      </mesh>)}
       {[-1, 1].map((side, sideIndex) => (
         <group key={side}>
           <mesh position={[side * 1.047, 0.26, 0.02]}>
@@ -289,17 +390,23 @@ export default function Roadster({
           </mesh>
           {[-1.48, 1.48].map((z, wheelIndex) => (
             <group
-              ref={(node) => {
-                wheels.current[sideIndex * 2 + wheelIndex] = node;
-              }}
               key={z}
               position={[side * 0.958, 0.45, z]}
               rotation={[0, 0, Math.PI / 2]}
             >
+              <mesh position={[0.18, -side * 0.12, -0.08]} rotation={[0, 0.3, 0]}>
+                <boxGeometry args={[0.1, 0.065, 0.23]} />
+                <meshStandardMaterial color="#a92e25" metalness={0.45} roughness={0.35} />
+              </mesh>
+              <group ref={(node) => { wheels.current[sideIndex * 2 + wheelIndex] = node; }}>
               <mesh castShadow>
-                <cylinderGeometry args={[0.431, 0.431, 0.24, 64]} />
+                <cylinderGeometry args={[0.427, 0.427, 0.14, 64]} />
                 <meshStandardMaterial color="#131719" roughness={0.96} />
               </mesh>
+              {[-0.065, 0.065].map((offset) => <mesh key={offset} position={[0, offset, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+                <torusGeometry args={[0.375, 0.056, 12, 64]} />
+                <meshStandardMaterial color="#15191b" roughness={0.9} />
+              </mesh>)}
               {[-0.074, 0, 0.074].map((offset) => (
                 <mesh
                   key={offset}
@@ -339,15 +446,18 @@ export default function Roadster({
               </mesh>
               {Array.from({ length: 5 }, (_, i) => (
                 <group key={i} rotation={[0, (i * Math.PI * 2) / 5, 0]}>
+                  <mesh geometry={geometries.aero} position={[0, -side * 0.155, 0]}>
+                    <meshStandardMaterial color="#8b9398" metalness={0.9} roughness={0.27} side={THREE.DoubleSide} />
+                  </mesh>
                   {[-1, 1].map((fork) => (
                     <mesh
                       key={fork}
                       position={[fork * 0.024, -side * 0.16, 0.18]}
                       rotation={[0, fork * 0.1, 0]}
                     >
-                      <boxGeometry args={[0.024, 0.026, 0.31]} />
+                      <boxGeometry args={[0.025, 0.026, 0.31]} />
                       <meshStandardMaterial
-                        color="#b6bfc3"
+                        color="#252d33"
                         metalness={0.9}
                         roughness={0.25}
                       />
@@ -363,6 +473,11 @@ export default function Roadster({
                   roughness={0.3}
                 />
               </mesh>
+              {Array.from({ length: 5 }, (_, i) => <mesh key={`bolt-${i}`} position={[Math.sin(i * Math.PI * 2 / 5) * 0.045, -side * 0.196, Math.cos(i * Math.PI * 2 / 5) * 0.045]}>
+                <cylinderGeometry args={[0.009, 0.009, 0.008, 6]} />
+                <meshStandardMaterial color="#a8afb1" metalness={0.9} roughness={0.22} />
+              </mesh>)}
+              </group>
             </group>
           ))}
         </group>

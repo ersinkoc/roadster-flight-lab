@@ -35,6 +35,7 @@ Stable versions checked against the npm registry on October 16, 2026: Next.js 16
 - Hold SPACE to climb; release it to descend under gravity. CTRL descends faster.
 - SHIFT: boost. Q: barrel roll above 8 meters (costs 10 pressure; awards 250 points on completion).
 - C: change camera. R: reset flight. ESC: pause or resume.
+- On the home screen, drag the 3D scene to inspect the car and scroll to zoom. Flight restores the gameplay camera.
 - On mobile, hold the corresponding on-screen controls.
 - Approach the runway ramp at speed for automatic liftoff. Fly through the rings in order, then land gently on the H pad below 18 km/h. A hard landing ends the flight.
 - Lift and boost consume pressure. Pressure recharges on the ground. All telemetry represents gameplay values.
@@ -52,6 +53,8 @@ Sources inspected on October 16, 2026:
 5. [NDTV — demonstration coverage](https://www.ndtv.com/offbeat/flying-car-tesla-roadster-flies-drives-upside-down-in-jaw-dropping-demo-watch-12192925): compared in news search results. The web reader could not open the full article.
 
 The car is modeled with Three.js geometry created for this project. The official photo in the sources dialog loads from Tesla’s CDN. Google Fonts and the reference photo require network access; the 3D scene does not download external models or textures.
+
+The detailed model includes continuous sculpted shoulders and fenders, rounded tire sidewalls, five aero wheel inserts with split spokes, stationary brake calipers, tinted glazing over a two-seat cockpit, segmented LED lamps, a shaped active wing, and a rounded rear fan surround. Paint and glass use reflective physical materials. This remains an original visual reconstruction from the reference photos, not Tesla engineering CAD.
 
 This is a fan-made arcade interpretation, not an official product or a Tesla/SpaceX partnership. Extended flight, pressure recharge, courses, speeds, time limits, and rewards are game mechanics. It is not an engineering simulation, and reported vehicle performance claims are not presented as measurements made by this game.
 

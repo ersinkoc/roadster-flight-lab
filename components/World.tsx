@@ -5,9 +5,10 @@ import {
   useMemo,
   useRef,
   type MutableRefObject,
+  type ComponentRef,
 } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Environment, Lightformer, Sky } from "@react-three/drei";
+import { Environment, Lightformer, Sky, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import Roadster from "./Roadster";
 import ThrusterHardware from "./ThrusterHardware";
@@ -225,6 +226,8 @@ function FlightScene(p: WorldProps) {
   const count = useRef(0);
   const frameTime = useRef(0);
   const ready = useRef(false);
+  const inspection = useRef<ComponentRef<typeof OrbitControls>>(null);
+  const inspecting = useRef(false);
   const replayFrames = STUNT_REPLAY;
   const replayClock = useRef(0);
   const replayIndex = useRef(0);
@@ -233,6 +236,7 @@ function FlightScene(p: WorldProps) {
   const cameraTarget = useMemo(() => new THREE.Vector3(), []);
   const lookTarget = useMemo(() => new THREE.Vector3(), []);
   useEffect(() => {
+    inspecting.current = false;
     state.current = initialState();
     if (p.running && p.mission.id === "stunt") {
       state.current.position.x = STUNT_RAMP.x;
@@ -347,10 +351,12 @@ function FlightScene(p: WorldProps) {
         lookTarget.set(pos.x, pos.y + 1, pos.z);
       }
     }
-    camera.position.lerp(
-      cameraTarget,
-      p.running ? 1 - Math.exp(-delta * 5) : 0.04,
-    );
+    if (p.running || !inspecting.current) {
+      camera.position.lerp(cameraTarget, p.running ? 1 - Math.exp(-delta * 5) : 0.04);
+      camera.lookAt(lookTarget);
+    }
+    if (inspection.current && !p.running)
+      inspection.current.target.set(pos.x, pos.y + 0.65, pos.z);
     if (camera instanceof THREE.PerspectiveCamera) {
       camera.fov = THREE.MathUtils.damp(
         camera.fov,
@@ -360,7 +366,6 @@ function FlightScene(p: WorldProps) {
       );
       camera.updateProjectionMatrix();
     }
-    camera.lookAt(lookTarget);
     timer.current += delta;
     count.current++;
     frameTime.current += delta;
@@ -378,6 +383,9 @@ function FlightScene(p: WorldProps) {
   });
   return (
     <>
+      <OrbitControls ref={inspection} enabled={!p.running} enablePan={false}
+        minDistance={4.5} maxDistance={18} minPolarAngle={0.12} maxPolarAngle={1.6}
+        rotateSpeed={0.6} zoomSpeed={0.65} onStart={() => { inspecting.current = true; }} />
       <fog
         attach="fog"
         args={[
@@ -423,7 +431,7 @@ function FlightScene(p: WorldProps) {
         <Environment
           resolution={128}
           frames={1}
-          environmentIntensity={p.night ? 0.15 : 1}
+          environmentIntensity={p.night ? 0.32 : 1}
         >
           <Lightformer
             position={[0, 8, 0]}
@@ -437,6 +445,8 @@ function FlightScene(p: WorldProps) {
             scale={[6, 4, 1]}
             intensity={3}
           />
+          <Lightformer position={[5, 5, -4]} rotation={[Math.PI / 4, -Math.PI / 4, 0]}
+            scale={[2, 12, 1]} intensity={1.5} />
         </Environment>
       </Suspense>
       <Desert night={p.night} />

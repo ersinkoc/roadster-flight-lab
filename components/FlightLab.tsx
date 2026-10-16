@@ -493,8 +493,7 @@ export default function FlightLab() {
             </div>
 
             <div className="intro-note">
-              <MousePointer2 size={13} /> Runs in your browser. You are the
-              pilot.
+              <MousePointer2 size={13} /> Drag to inspect the car. Scroll to zoom.
             </div>
             <button
               className={`demo-trigger ${demo ? "active" : ""}`}

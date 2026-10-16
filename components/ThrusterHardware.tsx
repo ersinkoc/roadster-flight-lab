@@ -16,6 +16,43 @@ export default function ThrusterHardware({
   color: string;
 }) {
   const cores = useRef<THREE.Group>(null);
+  const aero = useMemo(() => {
+    const shape = new THREE.Shape();
+    shape.moveTo(0.21, 0);
+    shape.quadraticCurveTo(0.21, 0.026, 0.12, 0.028);
+    shape.quadraticCurveTo(-0.08, 0.035, -0.2, 0.008);
+    shape.lineTo(-0.2, -0.008);
+    shape.quadraticCurveTo(0.1, -0.025, 0.21, 0);
+    const wing = new THREE.ExtrudeGeometry(shape, { depth: 2.06, bevelEnabled: true,
+      bevelSize: 0.008, bevelThickness: 0.008, bevelSegments: 3, curveSegments: 16, steps: 1 });
+    wing.rotateY(Math.PI / 2).translate(-1.03, 0, 0);
+    const frame = new THREE.Shape();
+    frame.moveTo(-0.82, 0.02);
+    frame.quadraticCurveTo(-0.93, 0.03, -0.93, 0.16);
+    frame.lineTo(-0.93, 0.43);
+    frame.quadraticCurveTo(-0.93, 0.56, -0.79, 0.56);
+    frame.lineTo(0.79, 0.56);
+    frame.quadraticCurveTo(0.93, 0.56, 0.93, 0.43);
+    frame.lineTo(0.93, 0.16);
+    frame.quadraticCurveTo(0.93, 0.03, 0.82, 0.02);
+    frame.closePath();
+    const opening = new THREE.Path();
+    opening.moveTo(-0.78, 0.07);
+    opening.lineTo(0.78, 0.07);
+    opening.quadraticCurveTo(0.84, 0.07, 0.84, 0.15);
+    opening.lineTo(0.84, 0.42);
+    opening.quadraticCurveTo(0.84, 0.47, 0.77, 0.47);
+    opening.lineTo(-0.77, 0.47);
+    opening.quadraticCurveTo(-0.84, 0.47, -0.84, 0.42);
+    opening.lineTo(-0.84, 0.15);
+    opening.quadraticCurveTo(-0.84, 0.07, -0.78, 0.07);
+    frame.holes.push(opening);
+    const tray = new THREE.ExtrudeGeometry(frame, { depth: 0.065, bevelEnabled: true,
+      bevelSize: 0.012, bevelThickness: 0.008, bevelSegments: 3, steps: 1, curveSegments: 12 });
+    tray.translate(0, 0, 2.43);
+    return { wing, tray };
+  }, []);
+  useEffect(() => () => { aero.wing.dispose(); aero.tray.dispose(); }, [aero]);
   const coreMask = useMemo(() => {
     const canvas = document.createElement("canvas");
     canvas.width = 32;
@@ -149,6 +186,13 @@ export default function ThrusterHardware({
           roughness={0.6}
         />
       </mesh>
+      <mesh geometry={aero.tray} castShadow>
+        <meshStandardMaterial color="#20282d" metalness={0.55} roughness={0.35} />
+      </mesh>
+      {[-0.42, 0, 0.42].map((x) => <mesh key={`divider-${x}`} position={[x, 0.27, 2.45]}>
+        <boxGeometry args={[0.024, 0.36, 0.06]} />
+        <meshStandardMaterial color="#283239" metalness={0.6} roughness={0.4} />
+      </mesh>)}
       {[-0.63, -0.21, 0.21, 0.63].map((x) => (
         <group key={x} position={[x, 0.25, 2.435]}>
           <mesh>
@@ -249,8 +293,7 @@ export default function ThrusterHardware({
         </group>
       ))}
       <group ref={wing} position={[0, 0.81, 2.04]}>
-        <mesh castShadow>
-          <boxGeometry args={[2.09, 0.035, 0.39]} />
+        <mesh geometry={aero.wing} castShadow>
           <meshPhysicalMaterial
             color={color}
             metalness={0.4}
