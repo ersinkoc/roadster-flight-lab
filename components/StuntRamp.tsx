@@ -1,7 +1,23 @@
 "use client";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import * as THREE from "three";
-import { STUNT_RAMP, stuntRampPoint } from "../lib/stunt-ramp";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import type { SolidBox } from "../lib/buildings";
+import { STUNT_RAMP, stuntRampPoint, STUNT_DECK, STUNT_SUPPORTS, STUNT_RIBS } from "../lib/stunt-ramp";
+
+function SolidParts({ parts, color }: { parts: SolidBox[]; color: string }) {
+  const geometry = useMemo(() => {
+    const pieces = parts.map((part) => new THREE.BoxGeometry(...part.size)
+      .rotateX(part.rotationX ?? 0).translate(...part.position));
+    const merged = mergeGeometries(pieces)!;
+    pieces.forEach((g) => g.dispose());
+    return merged;
+  }, [parts]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  return <mesh geometry={geometry} castShadow receiveShadow>
+    <meshStandardMaterial color={color} roughness={0.6} metalness={0.35} />
+  </mesh>;
+}
 export default function StuntRamp() {
   const surface = useMemo(() => {
     const vertices: number[] = [],
@@ -61,6 +77,7 @@ export default function StuntRamp() {
           side={THREE.DoubleSide}
         />
       </mesh>
+      <SolidParts parts={STUNT_DECK} color="#54616b" />
       {rails.map((g, i) => (
         <mesh key={i} geometry={g}>
           <meshStandardMaterial
@@ -70,48 +87,8 @@ export default function StuntRamp() {
           />
         </mesh>
       ))}
-      {Array.from({ length: 13 }, (_, i) => {
-        const a = (i / 12) * Math.PI,
-          p = stuntRampPoint(a);
-        return (
-          <group key={i} position={[p.x, p.y, p.z]} rotation={[a, 0, 0]}>
-            <mesh position={[0, -0.18, 0]}>
-              <boxGeometry args={[STUNT_RAMP.width + 1, 0.32, 0.45]} />
-              <meshStandardMaterial
-                color="#b25b35"
-                metalness={0.4}
-                roughness={0.6}
-              />
-            </mesh>
-          </group>
-        );
-      })}
-      {[-1, 1].map((side) => (
-        <group key={side}>
-          <mesh
-            position={[STUNT_RAMP.x + side * 7, 18, STUNT_RAMP.z]}
-            castShadow
-          >
-            <boxGeometry args={[0.45, 36, 0.7]} />
-            <meshStandardMaterial
-              color="#4c5861"
-              metalness={0.5}
-              roughness={0.5}
-            />
-          </mesh>
-          <mesh
-            position={[STUNT_RAMP.x + side * 7, 9, STUNT_RAMP.z - 18]}
-            castShadow
-          >
-            <boxGeometry args={[0.4, 18, 0.6]} />
-            <meshStandardMaterial
-              color="#4c5861"
-              metalness={0.5}
-              roughness={0.5}
-            />
-          </mesh>
-        </group>
-      ))}
+      <SolidParts parts={STUNT_RIBS} color="#b25b35" />
+      <SolidParts parts={STUNT_SUPPORTS} color="#4c5861" />
       <mesh position={[STUNT_RAMP.x, 0.015, 0]} receiveShadow>
         <boxGeometry args={[12, 0.03, 60]} />
         <meshStandardMaterial color="#56616a" roughness={0.9} />

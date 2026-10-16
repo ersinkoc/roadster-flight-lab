@@ -73,4 +73,6 @@ Select **Stunt ramp** and start flying to drive the course, or select **Watch st
 
 The separate stunt lane is centered at x = -36 meters. Hold W and approach above 87 km/h. Fan suction keeps the vehicle on a 36-meter-high curved overhang; it releases at the top, completes its rotation, then uses pressure-limited lift bursts to slow the descent. Brake with S to line up with the H pad. The three original ring courses retain their training ramp and controls.
 
+Roads support the wheels, and ramp structures have solid collision volumes. Hitting the curved deck, its underside, rails, ribs, support posts, or the training ramp's side and rear stops the car and ends the run. Normal approaches and landings use the driving surface. The automatic flip waits briefly for clearance past the overhang lip. Building walls and roof edges are also solid.
+
 The body was rebuilt against Tesla’s official front and side photos with wheel-well cutouts, a longer windshield, integrated fenders, triangular headlights, and split five-spoke wheels. Vapor uses white RGB, no scene fog, and bounded finite opacity. A reproduced lifetime-overrun bug previously sent NaN opacity into the shader; the regression fails before the fix and passes afterward. Browser checks inspect the inverted and recovery phases; the full stunt sequence and landing are also exercised in tests.

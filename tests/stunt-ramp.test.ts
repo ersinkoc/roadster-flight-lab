@@ -29,7 +29,7 @@ describe("inverted ramp and recovery", () => {
         inverted = true;
         expect(s.position.y).toBeGreaterThan(18);
       }
-      if (s.flipTimer > 0 && !s.flipComplete) {
+      if (s.flipTimer > STUNT_RAMP.releaseClearanceSeconds && !s.flipComplete) {
         aerialRotation = true;
         expect(s.pitch).toBeGreaterThan(Math.PI);
       }

@@ -13,7 +13,7 @@ import Roadster from "./Roadster";
 import ThrusterHardware from "./ThrusterHardware";
 import ThrusterEffects from "./ThrusterEffects";
 import StuntRamp from "./StuntRamp";
-import { STUNT_RAMP, smoothRecovery } from "../lib/stunt-ramp";
+import { STUNT_RAMP, flipRecovery } from "../lib/stunt-ramp";
 import { STUNT_REPLAY } from "../lib/stunt-replay";
 import { BUILDING_PARTS } from "../lib/buildings";
 import {
@@ -95,6 +95,23 @@ function Desert({ night }: { night: boolean }) {
     g.computeVertexNormals();
     return g;
   }, []);
+  const rampWalls = useMemo(() => {
+    const vertices: number[] = [];
+    for (let i = 0; i < 60; i++) {
+      const a = -35 - i * 0.5, b = a - 0.5;
+      const ha = rampHeight(0, a), hb = rampHeight(0, b);
+      for (const x of [-8, 8]) vertices.push(
+        x, -0.1, a, x, ha, a, x, hb, b,
+        x, -0.1, a, x, hb, b, x, -0.1, b,
+      );
+    }
+    vertices.push(-8, -0.1, -65, 8, -0.1, -65, 8, 6, -65,
+      -8, -0.1, -65, 8, 6, -65, -8, 6, -65);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+    g.computeVertexNormals();
+    return g;
+  }, []);
   const mountains = useMemo(mountainGeometry, []);
   useEffect(() => {
     if (!rocks.current) return;
@@ -146,6 +163,9 @@ function Desert({ night }: { night: boolean }) {
           roughness={0.85}
           side={THREE.DoubleSide}
         />
+      </mesh>
+      <mesh geometry={rampWalls} castShadow receiveShadow>
+        <meshStandardMaterial color="#687268" roughness={0.9} side={THREE.DoubleSide} />
       </mesh>
       {[-10, 10].map((x) => (
         <mesh key={x} position={[x, 0, -335]}>
@@ -286,7 +306,7 @@ function FlightScene(p: WorldProps) {
           : rampPitch || Math.min(0.13, s.vertical * 0.008),
         s.flipTimer >= 0 && !s.flipComplete
           ? -s.heading *
-              smoothRecovery(s.flipTimer / STUNT_RAMP.recoverySeconds)
+              flipRecovery(s.flipTimer)
           : -s.heading,
         s.roll,
       );

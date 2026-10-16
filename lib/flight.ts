@@ -1,5 +1,6 @@
-import { STUNT_RAMP, stuntRampPoint, smoothRecovery } from "./stunt-ramp";
-import { buildingImpact } from "./buildings";
+import { STUNT_RAMP, stuntRampPoint, flipRecovery, STUNT_SOLIDS, STUNT_APPROACH_SOLIDS } from "./stunt-ramp";
+import { buildingImpact, solidImpact } from "./buildings";
+import { trainingRampHeight, TRAINING_RAMP_SOLIDS } from "./road";
 export type Vec3 = { x: number; y: number; z: number };
 export type Input = {
   throttle: number;
@@ -131,9 +132,7 @@ export function stabilizerActive(s: FlightState) {
   );
 }
 export function rampHeight(x: number, z: number) {
-  return Math.abs(x) < 8 && z <= -35 && z >= -65
-    ? 6 * ((-z - 35) / 30) ** 2
-    : 0;
+  return trainingRampHeight(x, z);
 }
 export function stepFlight(
   s: FlightState,
@@ -247,7 +246,25 @@ export function stepFlight(
   }
   p.y = Math.min(100, p.y + vertical * dt);
   if (p.y >= 100) vertical = Math.min(0, vertical);
-  if (p.y <= floor) {
+  // Only a supported drive onto the low end, or descent from above, may
+  // resolve onto the training ramp. Side/rear entries must hit its solid wedge.
+  const supportedRampDrive = !airborne &&
+    Math.abs(previous.x) < 8 && Math.abs(p.x) < 8 &&
+    (priorFloor > 0 || (previous.z >= -35 && p.z < previous.z));
+  const footprintRampHeight = rampHeight(0, Math.max(-65,
+    Math.min(-35, Math.min(previous.z, p.z) - 2.6)));
+  const landingOnRamp = vertical <= 0 &&
+    previous.y > footprintRampHeight + 0.05;
+  const leavingRampTop = previous.z <= -65 && previous.y >= 5.7 &&
+    vertical > 0 && Math.cos(heading) > 0.9;
+  const trainingImpact = supportedRampDrive || landingOnRamp || leavingRampTop ? null :
+    solidImpact(TRAINING_RAMP_SOLIDS, previous, p, s, { heading, pitch: s.pitch, roll: s.roll });
+  if (trainingImpact) return {
+    ...s, position: trainingImpact, heading, speed: 0, vertical: 0,
+    elapsed: s.elapsed + dt, pressure, status: "crashed",
+    message: "You hit the ramp structure. Use its driving surface. R to retry.",
+  };
+  if (p.y <= floor || (!thrust && vertical <= 0 && p.y <= floor + 0.05)) {
     p.y = floor;
     if (airborne && vertical < -12) {
       status = "crashed";
@@ -289,7 +306,7 @@ export function stepFlight(
     flipTimer = Math.min(STUNT_RAMP.recoverySeconds, flipTimer + dt);
     pitch =
       Math.PI +
-      Math.PI * smoothRecovery(flipTimer / STUNT_RAMP.recoverySeconds);
+      Math.PI * flipRecovery(flipTimer);
     if (flipTimer >= STUNT_RAMP.recoverySeconds) {
       flipComplete = true;
       pitch = 0;
@@ -321,7 +338,18 @@ export function stepFlight(
     }
   }
   const roll = input.steer * (airborne ? -0.22 : -0.05) + stunt;
-  const impact = buildingImpact(previous, p, s, { heading, pitch, roll });
+  const building = buildingImpact(previous, p, s, { heading, pitch, roll });
+  const approachingStunt = !s.stuntLaunched && previous.z >= STUNT_RAMP.z &&
+    previous.y < 0.65 && Math.cos(heading) > 0.94 &&
+    Math.abs(previous.x - STUNT_RAMP.x) < STUNT_RAMP.width / 2 - 1.2;
+  const ramp = solidImpact(approachingStunt ? STUNT_APPROACH_SOLIDS : STUNT_SOLIDS,
+    // Tires contact the curve; the body envelope starts above the wheel tread
+    // so its tangent box doesn't falsely hit the curved road beneath the axle.
+    previous, p, s, { heading, pitch, roll }, 0.25);
+  const impact = building && ramp
+    ? Math.hypot(building.x - previous.x, building.y - previous.y, building.z - previous.z) <
+      Math.hypot(ramp.x - previous.x, ramp.y - previous.y, ramp.z - previous.z) ? building : ramp
+    : building ?? ramp;
   if (impact) {
     return {
       ...s,
@@ -336,7 +364,9 @@ export function stepFlight(
       peak: Math.max(s.peak, impact.y),
       distance: s.distance + Math.hypot(impact.x - previous.x, impact.z - previous.z),
       status: "crashed",
-      message: "You hit the building. Fly around it or climb above the roof. R to retry.",
+      message: impact === building
+        ? "You hit the building. Fly around it or climb above the roof. R to retry."
+        : "You hit the ramp structure. Fly around it or use its driving surface. R to retry.",
     };
   }
   if (!free && status !== "crashed" && elapsed >= mission.seconds) {
