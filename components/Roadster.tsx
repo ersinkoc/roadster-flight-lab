@@ -399,7 +399,7 @@ export default function Roadster({
           {[FRONT_AXLE, REAR_AXLE].map((z, wheelIndex) => (
             <group
               key={z}
-              position={[side * 0.958, 0.45, z]}
+              position={[side * 0.90, 0.45, z]}
               rotation={[0, 0, Math.PI / 2]}
             >
               <mesh position={[0.18, -side * 0.12, -0.08]} rotation={[0, 0.3, 0]}>
@@ -408,10 +408,10 @@ export default function Roadster({
               </mesh>
               <group ref={(node) => { wheels.current[sideIndex * 2 + wheelIndex] = node; }}>
               <mesh castShadow>
-                <cylinderGeometry args={[0.427, 0.427, 0.14, 64]} />
+                <cylinderGeometry args={[0.427, 0.427, 0.26, 64]} />
                 <meshStandardMaterial color="#131719" roughness={0.96} />
               </mesh>
-              {[-0.065, 0.065].map((offset) => <mesh key={offset} position={[0, offset, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+              {[-0.105, 0.105].map((offset) => <mesh key={offset} position={[0, offset, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
                 <torusGeometry args={[0.375, 0.056, 12, 64]} />
                 <meshStandardMaterial color="#15191b" roughness={0.9} />
               </mesh>)}
@@ -452,21 +452,21 @@ export default function Roadster({
                   roughness={0.55}
                 />
               </mesh>
-              <mesh geometry={geometries.wheelFace} position={[0,-side*0.205,0]}
+              <mesh geometry={geometries.wheelFace} position={[0,-side*0.158,0]}
                 rotation={[side*Math.PI/2,0,0]}>
                 <meshStandardMaterial map={wheelPhoto} roughness={0.32} metalness={0.15}
                   emissiveMap={wheelPhoto} emissive="#ffffff" emissiveIntensity={0.18} />
               </mesh>
-              <mesh position={[0,-side*0.219,0]} rotation={[Math.PI/2,0,0]}>
+              <mesh position={[0,-side*0.171,0]} rotation={[Math.PI/2,0,0]}>
                 <torusGeometry args={[0.341,0.007,8,64]} />
                 <meshStandardMaterial color="#899399" metalness={0.95} roughness={0.22} />
               </mesh>
-              <mesh position={[0,-side*0.225,0]}>
+              <mesh position={[0,-side*0.18,0]}>
                 <cylinderGeometry args={[0.057,0.057,0.026,24]} />
                 <meshStandardMaterial color="#242d31" metalness={0.8} roughness={0.25} />
               </mesh>
               {Array.from({length:5},(_,i) => <group key={i} rotation={[0,i*Math.PI*2/5,0]}>
-                <mesh position={[0,-side*0.219,0.198]} rotation={[0,-0.12,0]}>
+                <mesh position={[0,-side*0.17,0.198]} rotation={[0,-0.12,0]}>
                   <boxGeometry args={[0.016,0.022,0.258]} />
                   <meshStandardMaterial color="#30383c" metalness={0.85} roughness={0.25} />
                 </mesh>
