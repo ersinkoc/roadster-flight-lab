@@ -209,6 +209,10 @@ svg {
 .official-video-tabs button[aria-pressed="true"] { background: #29372b; color: #fff; }
 .official-player { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; background: #080b0c; }
 .official-media-credit { font-size: 11px !important; }
+.model-views { position: absolute; top: 64px; left: 50%; transform: translateX(-50%); display: flex; gap: 1px; z-index: 2; }
+.model-views button { padding: 9px 13px; font: 9px var(--mono); background: #e8e8dfe6; color: #354334; border: 1px solid #9ca493; white-space: nowrap; }
+.model-views button[aria-pressed="true"] { background: #344535; color: #fff; }
+@media (max-width: 800px) { .model-views { display: none; } }
 @media (max-width: 800px) {
   .photo-home .briefing { top: auto; }
   .official-photo img { width: 170%; max-width: none; transform: translateX(-34%); object-position: center 50%; }

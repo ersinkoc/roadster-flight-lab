@@ -57,7 +57,7 @@ Sources inspected on October 16, 2026:
 
 The car is modeled with Three.js geometry created for this project. The official photo in the sources dialog loads from Tesla’s CDN. Google Fonts and the reference photo require network access; the 3D scene does not download external models or textures.
 
-The detailed model includes continuous sculpted shoulders and fenders, rounded tire sidewalls, five aero wheel inserts with split spokes, stationary brake calipers, tinted glazing over a two-seat cockpit, segmented LED lamps, a shaped active wing, and a rounded rear fan surround. Paint and glass use reflective physical materials. This remains an original visual reconstruction from the reference photos, not Tesla engineering CAD.
+The in-game body is reconstructed against the white, angular flight-demonstration Roadster: separate planar windshield and roof glazing, revised axle spacing, faceted shoulders, broad trapezoidal front intake, triangular LED bays, and flush covers over the side control jets. The rear fan assembly tilts under the tail. Desktop front, side and rear inspection presets show the silhouette, and `?view=3d` opens that preview directly. The model also includes rounded tire shoulders, aero wheel inserts, brake calipers and the active wing. This remains an original visual reconstruction from the reference photos, not Tesla engineering CAD.
 
 This is a fan-made arcade interpretation, not an official product or a Tesla/SpaceX partnership. Extended flight, pressure recharge, courses, speeds, time limits, and rewards are game mechanics. It is not an engineering simulation, and reported vehicle performance claims are not presented as measurements made by this game.
 

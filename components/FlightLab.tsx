@@ -177,6 +177,7 @@ export default function FlightLab() {
     [night, setNight] = useState(true),
     [demo, setDemo] = useState(false),
     [homeView, setHomeView] = useState<"photo" | "3d">("photo"),
+    [modelView, setModelView] = useState<"front" | "side" | "rear">("side"),
     [photo, setPhoto] = useState(1),
     [cameraMode, setCameraMode] = useState(0),
     [reset, setReset] = useState(0),
@@ -200,6 +201,7 @@ export default function FlightLab() {
   const ended =
     telemetry.status === "crashed" || telemetry.status === "complete";
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("view") === "3d") setHomeView("3d");
     try {
       setBest(Number(localStorage.getItem("flightlab-best")) || 0);
       const q = localStorage.getItem("flightlab-quality");
@@ -445,6 +447,7 @@ export default function FlightLab() {
               night={night}
               demo={demo}
               cameraMode={cameraMode}
+              modelView={modelView}
               reset={reset}
               replay={replay}
               replaySeek={replaySeek}
@@ -460,6 +463,12 @@ export default function FlightLab() {
             alt={photo === 1 ? "Actual Tesla Roadster — official Tesla side photograph" : "Actual Tesla Roadster — official Tesla front photograph"} fetchPriority="high" />
         </div>}
         <div className="scene-vignette" />
+        {!running && homeView === "3d" && <div className="model-views" aria-label="Car inspection views">
+          {(["front", "side", "rear"] as const).map((view) => <button key={view}
+            aria-pressed={modelView === view} onClick={() => { setModelView(view); setReset((v) => v + 1); }}>
+            {view === "front" ? "Front view" : view === "side" ? "Side view" : "Rear view"}
+          </button>)}
+        </div>}
         <div className="location">
           <span className="live-dot" />
           <span>{!running && homeView === "photo" ? "TESLA / OFFICIAL PHOTOGRAPHY" : "BLACK ROCK DESERT"}</span>
@@ -510,7 +519,7 @@ export default function FlightLab() {
             </div>}
             <button className="demo-trigger" onClick={() => {
               setHomeView(homeView === "photo" ? "3d" : "photo");
-              setDemo(homeView === "photo");
+              setDemo(false);
             }}>{homeView === "photo" ? "Explore 3D simulator" : "Back to Tesla photos"} <ArrowUpRight size={13} /></button>
             {homeView === "3d" &&
             <button

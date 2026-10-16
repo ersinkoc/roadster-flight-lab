@@ -16,6 +16,8 @@ export default function ThrusterHardware({
   color: string;
 }) {
   const cores = useRef<THREE.Group>(null);
+  const sideOutlets = useRef<(THREE.Group | null)[]>([]);
+  const sideCovers = useRef<(THREE.Mesh | null)[]>([]);
   const aero = useMemo(() => {
     const shape = new THREE.Shape();
     shape.moveTo(0.21, 0);
@@ -101,6 +103,12 @@ export default function ThrusterHardware({
         input.current.boost)
         ? 1
         : 0;
+    THRUSTERS.forEach((n, i) => {
+      if (n.kind !== "rcs") return;
+      const firing = thrusterPower(i, state.current, input.current, active) > 0;
+      if (sideOutlets.current[i]) sideOutlets.current[i]!.visible = firing;
+      if (sideCovers.current[i]) sideCovers.current[i]!.visible = !firing;
+    });
     if (cores.current)
       cores.current.children.forEach((jet, i) => {
         const power = thrusterPower(i, state.current, input.current, active);
@@ -178,6 +186,8 @@ export default function ThrusterHardware({
           </group>
         ))}
       </group>
+      <group position={[0, 0.25, 2.435]} rotation={[0.35, 0, 0]} scale={0.94}>
+      <group position={[0, -0.25, -2.435]}>
       <mesh position={[0, 0.33, 2.33]}>
         <boxGeometry args={[1.89, 0.44, 0.17]} />
         <meshStandardMaterial
@@ -247,9 +257,17 @@ export default function ThrusterHardware({
           <meshStandardMaterial color="#11171b" />
         </mesh>
       ))}
+      </group>
+      </group>
+      {THRUSTERS.map((n, i) => n.kind === "rcs" ? <mesh key={`cover-${n.id}`}
+        ref={(node) => { sideCovers.current[i] = node; }} position={[n.side * 1.048, 0.57, 0.45]}>
+        <boxGeometry args={[0.012, 0.19, 0.22]} />
+        <meshPhysicalMaterial color={color} metalness={0.32} roughness={0.19} clearcoat={1} />
+      </mesh> : null)}
       {THRUSTERS.map((n, i) => (
         <group
           key={n.id}
+          ref={(node) => { if (n.kind === "rcs") sideOutlets.current[i] = node; }}
           position={n.position as [number, number, number]}
           quaternion={orientations[i]}
         >

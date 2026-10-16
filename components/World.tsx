@@ -36,6 +36,7 @@ export type WorldProps = {
   night: boolean;
   demo: boolean;
   cameraMode: number;
+  modelView: "front" | "side" | "rear";
   reset: number;
   replay: boolean;
   replaySeek: { time: number; nonce: number };
@@ -228,6 +229,7 @@ function FlightScene(p: WorldProps) {
   const ready = useRef(false);
   const inspection = useRef<ComponentRef<typeof OrbitControls>>(null);
   const inspecting = useRef(false);
+  useEffect(() => { inspecting.current = false; }, [p.modelView]);
   const replayFrames = STUNT_REPLAY;
   const replayClock = useRef(0);
   const replayIndex = useRef(0);
@@ -328,6 +330,11 @@ function FlightScene(p: WorldProps) {
         demo ? 32.5 : 14,
       );
       lookTarget.set(0, demo ? pos.y + 0.5 : 0.7, 24);
+      if (!inspecting.current) {
+        cameraTarget.set(pos.x + (p.modelView === "side" ? 7.5 : 0), pos.y + 0.75,
+          pos.z + (p.modelView === "front" ? -5.5 : p.modelView === "rear" ? 5.5 : 0));
+        lookTarget.set(pos.x, pos.y + 0.75, pos.z);
+      }
     } else {
       const h = s.heading;
       const dist = p.cameraMode === 1 ? 6.5 : p.cameraMode === 2 ? 24 : 10;
@@ -360,7 +367,7 @@ function FlightScene(p: WorldProps) {
     if (camera instanceof THREE.PerspectiveCamera) {
       camera.fov = THREE.MathUtils.damp(
         camera.fov,
-        !p.running && p.demo ? (size.width < size.height * 0.8 ? 55 : 37) : 48,
+        !p.running ? (size.width < size.height * 0.8 ? 55 : 37) : 48,
         4,
         Math.min(delta, 0.05),
       );
