@@ -45,6 +45,7 @@ import { STUNT_RAMP } from "../lib/stunt-ramp";
 import { STUNT_REPLAY, STUNT_REPLAY_DURATION } from "../lib/stunt-replay";
 import { AirBurstAudio, airBurstLevel } from "../lib/air-audio";
 import OfficialMedia from "./OfficialMedia";
+import { rampRideInput } from "../lib/ramp-ride";
 const World = dynamic(() => import("./World"), { ssr: false });
 const colors = [
   { name: "Ano White", hex: "#ecece5" },
@@ -172,7 +173,7 @@ export default function FlightLab() {
   const [running, setRunning] = useState(false),
     [paused, setPaused] = useState(false),
     [free, setFree] = useState(false),
-    [missionIndex, setMissionIndex] = useState(missions.length - 2),
+    [missionIndex, setMissionIndex] = useState(missions.length - 1),
     [color, setColor] = useState(0),
     [quality, setQuality] = useState("balanced"),
     [night, setNight] = useState(false),
@@ -183,6 +184,7 @@ export default function FlightLab() {
     [cameraMode, setCameraMode] = useState(0),
     [reset, setReset] = useState(0),
     [replay, setReplay] = useState(false),
+    [rideAssist, setRideAssist] = useState(true),
     [replaySeek, setReplaySeek] = useState({ time: 0, nonce: 0 }),
     [modal, setModal] = useState<"help" | "sources" | "settings" | "media" | null>(null),
     [sound, setSound] = useState(false),
@@ -310,11 +312,12 @@ export default function FlightLab() {
     audio.current?.update(
       airBurstLevel(
         s,
-        demoAudioRef.current ? { ...input.current, lift: true } : input.current,
+        demoAudioRef.current ? { ...input.current, lift: true } :
+          rideAssist && !free && !replay && mission.id === "stunt" ? rampRideInput(s) : input.current,
         soundRef.current,
       ),
     );
-  }, []);
+  }, [rideAssist,free,replay,mission.id]);
   useEffect(() => {
     soundRef.current =
       sound && (running || demo) && !paused && !modal && !ended;
@@ -357,6 +360,11 @@ export default function FlightLab() {
   const openModal = (m: typeof modal) => {
     setModal(m);
     if (running) setPaused(true);
+  };
+  const startRampRide = () => {
+    setMissionIndex(missions.findIndex(m=>m.id==="stunt"));
+    setFree(false); setRideAssist(true); setReplay(false); setDemo(false);
+    setCameraMode(0); setModal(null); restart(); setRunning(true);
   };
   const goHome = () => {
     setReplay(false);
@@ -407,7 +415,7 @@ export default function FlightLab() {
         );
   return (
     <main
-      className={`flight-app ${running ? "is-running" : ""} ${!running && homeView === "photo" ? "photo-home" : ""} ${night || (!running && homeView === "photo") ? "demo-night" : ""}`}
+      className={`flight-app ${running ? "is-running" : ""} ${!running && mission.id === "stunt" ? "ramp-home" : ""} ${!running && homeView === "photo" ? "photo-home" : ""} ${night || (!running && homeView === "photo") ? "demo-night" : ""}`}
     >
       <header className="topbar">
         <button className="brand" onClick={goHome} aria-label="Flight Lab home">
@@ -418,6 +426,7 @@ export default function FlightLab() {
           </span>
         </button>
         <nav aria-label="Main navigation">
+          <button onClick={startRampRide} disabled={!ready}>Ramp ride ↗</button>
           <button
             className={!modal ? "nav-active" : ""}
             onClick={() => setModal(null)}
@@ -464,6 +473,7 @@ export default function FlightLab() {
               modelView={modelView}
               reset={reset}
               replay={replay}
+              rideAssist={rideAssist}
               replaySeek={replaySeek}
               input={input}
               onTelemetry={onTelemetry}
@@ -510,7 +520,7 @@ export default function FlightLab() {
             </p>
             <div className="intro-actions">
               <button className="primary" onClick={launch} disabled={!ready}>
-                {ready ? free ? "Explore freely" : mission.id === "stunt" ? "Ride roller-coaster" : "Start mission" : "Preparing flight"}{" "}
+                {ready ? free ? "Explore freely" : mission.id === "stunt" ? rideAssist ? "Start ramp ride" : "Drive ramp manually" : "Start mission" : "Preparing flight"}{" "}
                 <ArrowUpRight size={19} />
               </button>
               <button
@@ -547,10 +557,7 @@ export default function FlightLab() {
           </div>
         )}
         {!running && (
-          <button className="stunt-trigger" disabled={!ready} onClick={() => {
-            setMissionIndex(missions.findIndex(m => m.id === "stunt"));
-            setFree(false); setReplay(false); setDemo(false); restart(); setRunning(true);
-          }}>Drive roller-coaster <ArrowUpRight size={14} /></button>
+          <button className="stunt-trigger" disabled={!ready} onClick={startRampRide}>One-click ramp ride <ArrowUpRight size={14} /></button>
         )}
         {!running && (
           <button
@@ -608,6 +615,11 @@ export default function FlightLab() {
                     : mission.subtitle}
                 </p>
                 {mission.challenge && !free && <p className="challenge-brief">Center passes build a ×5 combo and restore air. Gold: 5 perfect passes in under 82.5s.</p>}
+                {mission.id === "stunt" && !free && <div className="ride-choice">
+                  <button aria-pressed={rideAssist} onClick={()=>setRideAssist(true)}>Assisted ride</button>
+                  <button aria-pressed={!rideAssist} onClick={()=>setRideAssist(false)}>Manual drive</button>
+                  <small>{rideAssist ? "3, 2, 1 → auto approach, inversion, flip and landing. No controls needed." : "Hold W straight ahead. Leave SPACE released until the curve."}</small>
+                </div>}
                 {!!courseBests[mission.id] && !free && <div className="course-best">COURSE BEST · {courseBests[mission.id].toLocaleString("en-US")}</div>}
                 <label className="mission-select">
                   <span>COURSE</span>
@@ -654,15 +666,19 @@ export default function FlightLab() {
                   </div>
                 </div>
                 <div className="mode-switch">
+                  <button className={!free && mission.id === "stunt" ? "active" : ""} onClick={()=>{
+                    setMissionIndex(missions.length-1); setFree(false); setHomeView("3d"); restart();
+                  }}>Ramp ride</button>
                   <button
-                    className={!free ? "active" : ""}
+                    className={!free && mission.id !== "stunt" ? "active" : ""}
                     onClick={() => {
                       setFree(false);
+                      if(mission.id==="stunt") setMissionIndex(0);
                       setHomeView("3d");
                       restart();
                     }}
                   >
-                    <Crosshair size={13} /> Mission flight
+                    <Crosshair size={13} /> Missions
                   </button>
                   <button
                     className={free ? "active" : ""}
@@ -672,7 +688,7 @@ export default function FlightLab() {
                       restart();
                     }}
                   >
-                    <Wind size={13} /> Free flight
+                    <Wind size={13} /> Free roam
                   </button>
                 </div>
               </>
@@ -789,14 +805,17 @@ export default function FlightLab() {
                     : `${Math.floor(Math.max(0, mission.seconds - telemetry.elapsed) / 60)}:${String(Math.floor(Math.max(0, mission.seconds - telemetry.elapsed) % 60)).padStart(2, "0")}`}
                 </b>
               </div>
+              {(free || mission.id !== "stunt") && <button className="ramp-jump" onClick={startRampRide}>Go to ramp ride ↗</button>}
             </aside>
             {rampTarget && <div className="ramp-guide" aria-label="Roller-coaster approach">
-              <b>HOLD W / ACCELERATE</b>
-              <span>Stay straight. Keep SPACE / FLY released.</span>
+              <b>{rideAssist ? "ASSISTED RAMP RIDE" : "HOLD W / ACCELERATE"}</b>
+              <span>{rideAssist ? "Auto throttle + lane guidance. No input needed." : "Stay straight. Keep SPACE / FLY released."}</span>
               <progress value={Math.min(STUNT_RAMP.minSpeed,telemetry.speed)} max={STUNT_RAMP.minSpeed} />
               <strong>{Math.round(telemetry.speed*3.6)} / 87 km/h · {telemetry.rampProgress >= 0 ? "GRIP ENGAGED" : telemetry.speed >= STUNT_RAMP.minSpeed ? "ENTRY SPEED READY" : "BUILD SPEED"}</strong>
-              <small>The curve grips automatically. After the flip, S / BRAKE to land.</small>
+              <small>{rideAssist ? "Auto flip + landing. C changes the camera." : "The curve grips automatically. After the flip, S / BRAKE to land."}</small>
             </div>}
+            {!free && mission.id === "stunt" && rideAssist && !replay && !paused && !modal && (telemetry.launchCountdown ?? 0)>0 &&
+              <div className="ride-countdown" role="status"><span>READY FOR INVERSION</span><b>{Math.ceil(telemetry.launchCountdown!)}</b><small>No controls needed · enjoy the ride</small></div>}
             <div className="flight-reticle">
               <span />
               <i />
@@ -882,7 +901,7 @@ export default function FlightLab() {
             <span>{telemetry.elapsed.toFixed(1)}s</span>
           </div>
         )}
-        {running && !replay && (
+        {running && !replay && !(rideAssist && !free && mission.id === "stunt") && (
           <div className="touch-controls">
             <div className="touch-directions">
               <button {...touchProps("KeyW")} aria-label="Accelerate">
@@ -920,6 +939,11 @@ export default function FlightLab() {
             </div>
           </div>
         )}
+        {running && rideAssist && !free && mission.id === "stunt" && !replay && !ended && <div className="ride-controls">
+          <span>ASSISTED RIDE</span>
+          <button onClick={()=>setCameraMode(v=>(v+1)%3)}>Change view</button>
+          <button onClick={restart}>Restart ride</button>
+        </div>}
         {running && ((paused && !replay) || ended) && !modal && (
           <div className="pause-scrim">
             <div className="result-card">
@@ -975,6 +999,9 @@ export default function FlightLab() {
               {telemetry.status === "complete" && !replay && <button className="text-button" onClick={() => {
                 setMissionIndex((v) => (v+1)%missions.length); restart();
               }}>Next course →</button>}
+              {ended && mission.id === "stunt" && rideAssist && !replay && <button className="text-button" onClick={()=>{
+                setRideAssist(false); restart();
+              }}>Try manual driving →</button>}
             </div>
           </div>
         )}

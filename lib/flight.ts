@@ -121,6 +121,7 @@ export type FlightState = {
   reward: string;
   rewardAt: number;
   rewardPoints: number;
+  launchCountdown?: number;
 };
 export function initialState(mission?: Mission, free = false): FlightState {
   return {

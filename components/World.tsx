@@ -16,6 +16,7 @@ import ThrusterEffects from "./ThrusterEffects";
 import StuntRamp from "./StuntRamp";
 import { STUNT_RAMP, flipRecovery } from "../lib/stunt-ramp";
 import { STUNT_REPLAY } from "../lib/stunt-replay";
+import { rampRideInput, rampRideStart, stepRampRide } from "../lib/ramp-ride";
 import { BUILDING_PARTS } from "../lib/buildings";
 import {
   initialState,
@@ -39,6 +40,7 @@ export type WorldProps = {
   modelView: "front" | "side" | "rear";
   reset: number;
   replay: boolean;
+  rideAssist: boolean;
   replaySeek: { time: number; nonce: number };
   input: MutableRefObject<Input>;
   onTelemetry: (state: FlightState, fps: number) => void;
@@ -239,10 +241,10 @@ function FlightScene(p: WorldProps) {
   const lookTarget = useMemo(() => new THREE.Vector3(), []);
   useEffect(() => {
     inspecting.current = false;
-    state.current = initialState(p.mission, p.free);
+    state.current = !p.running ? initialState() : p.rideAssist && !p.free && p.mission.id === "stunt" ? rampRideStart(p.mission) : initialState(p.mission, p.free);
     timer.current = 0;
     p.onTelemetry(state.current, 0);
-  }, [p.reset, p.mission, p.free, p.onTelemetry, p.demo, p.running]);
+  }, [p.reset, p.mission, p.free, p.rideAssist, p.onTelemetry, p.demo, p.running]);
   useEffect(() => {
     if (p.replay) {
       replayClock.current = p.replaySeek.time;
@@ -267,7 +269,7 @@ function FlightScene(p: WorldProps) {
       );
       state.current = replayFrames[replayIndex.current].state;
     } else if (p.running && !p.paused)
-      state.current = stepFlight(
+      state.current = p.rideAssist && !p.free && p.mission.id === "stunt" ? stepRampRide(state.current,delta,p.mission) : stepFlight(
         state.current,
         p.input.current,
         delta,
@@ -282,6 +284,7 @@ function FlightScene(p: WorldProps) {
     }
     const controls = p.replay
       ? replayFrames[replayIndex.current].input
+      : p.rideAssist && !p.free && p.mission.id === "stunt" ? rampRideInput(state.current)
       : p.input.current;
     visualInput.current = {
       ...controls,
@@ -353,6 +356,13 @@ function FlightScene(p: WorldProps) {
         if (!p.free && !s.stuntLaunched && s.rampProgress < 0) {
           cameraTarget.set(pos.x, pos.y + 3.2, pos.z + 10);
           lookTarget.set(pos.x, pos.y + 3, pos.z - 22);
+        } else if (!p.free && s.rampProgress >= 0) {
+          // Stay on the inside of the curve so the deck cannot hide the car
+          // while it rides beneath the inverted section.
+          const a=s.rampProgress;
+          cameraTarget.set(pos.x+12,pos.y+Math.cos(a)*5,
+            pos.z+Math.sin(a)*5+Math.cos(a)*10);
+          lookTarget.set(pos.x,pos.y+Math.cos(a)*0.5,pos.z+Math.sin(a)*0.5);
         } else if (!p.free) {
           cameraTarget.set(pos.x + 10, pos.y + 4, pos.z + 12);
           lookTarget.set(pos.x, pos.y + 1, pos.z);

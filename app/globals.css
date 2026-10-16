@@ -1,4 +1,20 @@
 @import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+.ride-choice { display: flex; flex-wrap: wrap; gap: 4px; margin: -7px 0 14px; }
+.ramp-home .briefing { top: 24px; }
+@media (max-width: 800px) { .ramp-home .briefing { top: auto; } }
+.ride-choice button { font: 8px var(--mono); padding: 8px; border: 1px solid #bdcabc; flex: 1; }
+.ride-choice button[aria-pressed="true"] { color: white; background: #344e45; border-color: #344e45; }
+.ride-choice small { display: block; flex-basis: 100%; font: 8px/1.6 var(--mono); color: #647465; padding-top: 5px; }
+.ride-countdown { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; pointer-events: none; color: #f1fff6; text-shadow: 0 3px 30px #152f26; background: #12312522; }
+.ride-countdown span { font: 11px var(--mono); letter-spacing: 4px; }
+.ride-countdown b { font: 160px/1.05 var(--display); }
+.ride-countdown small { font: 11px var(--mono); }
+.ramp-jump { display: block; width: 100%; padding: 10px 0; background: #344e45; color: white; font: 10px var(--mono); margin-top: 12px; }
+.ride-controls { position: absolute; bottom: 24px; right: 36px; display: flex; align-items: center; gap: 5px; padding: 6px; background: #19312fe8; color: #edfff2; border: 1px solid #8db7a5; }
+.ride-controls span { padding: 0 8px; font: 8px var(--mono); color: #a3c3b2; }
+.ride-controls button { padding: 10px; background: #ffffff15; font: 9px var(--mono); }
+@media (max-width: 800px) { .ride-controls { right: 16px; left: 16px; justify-content: center; bottom: 26px; } }
+@media (max-width: 800px) { .ride-countdown b { font-size: 100px; } .ride-countdown span, .ride-countdown small { font-size: 8px; letter-spacing: 1px; } }
 .stunt-preview { position: absolute; left: 185px; bottom: 75px; padding: 6px 0; font: 9px var(--mono); text-decoration: underline; z-index: 1; }
 .demo-night .stunt-preview { color: #e2dfd1; }
 .ramp-guide { position: absolute; top: 165px; left: 36px; display: grid; gap: 9px; width: 265px; padding: 16px; background: #183132ed; color: #f0fff4; border: 1px solid #7bac9c; font: 10px/1.5 var(--mono); pointer-events: none; }
