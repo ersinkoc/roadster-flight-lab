@@ -3,6 +3,6 @@ export function vaporOpacity(age: number, kind: number) {
   return (
     Math.max(0, Math.min(1, age * 15)) *
     (1 - age) ** 1.5 *
-    (kind === 0 ? 0.75 : kind === 2 ? 0.48 : 0.32)
+    (kind === 0 ? 0.65 : kind === 2 ? 0.22 : 0.19)
   );
 }

@@ -16,6 +16,23 @@ export default function ThrusterHardware({
   color: string;
 }) {
   const cores = useRef<THREE.Group>(null);
+  const coreMask = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 32;
+    canvas.height = 128;
+    const ctx = canvas.getContext("2d")!;
+    const image = ctx.createImageData(32, 128);
+    for (let y = 0; y < 128; y++) for (let x = 0; x < 32; x++) {
+      const fade = (1 - y / 127) ** 2;
+      const ripple = 0.85 + 0.08 * Math.sin(y * 0.45 + Math.sin(x * 0.4));
+      const i = (y * 32 + x) * 4;
+      image.data[i] = image.data[i + 1] = image.data[i + 2] = Math.round(255 * fade * ripple);
+      image.data[i + 3] = 255;
+    }
+    ctx.putImageData(image, 0, 0);
+    return new THREE.CanvasTexture(canvas);
+  }, []);
+  useEffect(() => () => coreMask.dispose(), [coreMask]);
   const coreGeometry = useMemo(
     () =>
       new THREE.CylinderGeometry(0.045, 0.105, 1, 16, 1, true).translate(
@@ -94,13 +111,14 @@ export default function ThrusterHardware({
             <mesh geometry={coreGeometry} renderOrder={3}>
               <meshBasicMaterial
                 color="#ffffff"
+                alphaMap={coreMask}
                 transparent
-                opacity={0.16}
+                opacity={0.065}
                 depthWrite={false}
                 side={THREE.DoubleSide}
                 toneMapped={false}
                 fog={false}
-                blending={THREE.AdditiveBlending}
+                blending={THREE.NormalBlending}
               />
             </mesh>
             <mesh
@@ -110,13 +128,14 @@ export default function ThrusterHardware({
             >
               <meshBasicMaterial
                 color="#ffffff"
+                alphaMap={coreMask}
                 transparent
-                opacity={0.22}
+                opacity={0.12}
                 depthWrite={false}
                 side={THREE.DoubleSide}
                 toneMapped={false}
                 fog={false}
-                blending={THREE.AdditiveBlending}
+                blending={THREE.NormalBlending}
               />
             </mesh>
           </group>
